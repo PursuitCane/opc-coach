@@ -68,6 +68,50 @@
 .upload-btn input {
   display: none;
 }
+.upload-btn.inline {
+  border: none;
+  font-size: 14px;
+}
+
+.paste-toggle {
+  margin-top: 18px;
+  font-size: 13px;
+  color: #71717a;
+}
+.paste-toggle button {
+  background: none;
+  border: none;
+  color: #6366f1;
+  cursor: pointer;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.paste-box {
+  text-align: left;
+}
+.paste-box textarea {
+  width: 100%;
+  border: 1px solid #d4d4d8;
+  border-radius: 10px;
+  padding: 12px;
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+}
+.paste-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+}
+.paste-back {
+  background: none;
+  border: none;
+  color: #71717a;
+  cursor: pointer;
+  font-size: 14px;
+}
 
 /* 报告工作区：左报告右对话 */
 .workspace {

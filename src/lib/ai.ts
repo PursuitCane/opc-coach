@@ -65,7 +65,26 @@ export async function evaluateBP(bpText: string): Promise<EvaluationReport> {
     ],
     { jsonMode: true },
   )
-  return JSON.parse(raw) as EvaluationReport
+  return parseReport(raw)
+}
+
+// 容错解析：中转有时会把 JSON 包在 ```json 代码块里，或前后带杂字
+function parseReport(raw: string): EvaluationReport {
+  let text = raw.trim()
+  // 去掉 markdown 代码围栏
+  const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/)
+  if (fence) text = fence[1].trim()
+  // 兜底：截取第一个 { 到最后一个 }
+  if (!text.startsWith('{')) {
+    const s = text.indexOf('{')
+    const e = text.lastIndexOf('}')
+    if (s >= 0 && e > s) text = text.slice(s, e + 1)
+  }
+  try {
+    return JSON.parse(text) as EvaluationReport
+  } catch {
+    throw new Error('军师返回的评估格式没解析出来，再试一次或换份 BP。')
+  }
 }
 
 // 追问：基于 BP + 报告 + 历史对话继续回答
