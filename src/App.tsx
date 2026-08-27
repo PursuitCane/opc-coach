@@ -62,14 +62,10 @@ export default function App() {
     }
   }
 
-  const downloadOptimized = () => {
-    const blob = new Blob([optimized], { type: 'text/markdown' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = '优化后的BP.md'
-    a.click()
-    URL.revokeObjectURL(url)
+  const printOptimized = () => {
+    // 走浏览器原生打印引擎导 PDF：中文清晰、矢量、零额外依赖
+    // 打印样式（@media print）只保留 .optimized 区块
+    window.print()
   }
 
   return (
@@ -114,10 +110,14 @@ export default function App() {
                 {busy && busy !== 'ask' ? busy : '产出优化后的 BP'}
               </button>
               {optimized && (
-                <div className="optimized">
-                  <div className="optimized-head">
+                <div className="optimized" id="print-area">
+                  <div className="optimized-head no-print">
                     <h3>优化后的 BP</h3>
-                    <button onClick={downloadOptimized}>下载 .md</button>
+                    <button onClick={printOptimized}>下载 PDF</button>
+                  </div>
+                  <div className="print-title">
+                    <h1>优化后的商业计划书</h1>
+                    <span>由 OPC 军师生成</span>
                   </div>
                   <div className="optimized-body">
                     <ReactMarkdown>{optimized}</ReactMarkdown>
