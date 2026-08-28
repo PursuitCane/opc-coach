@@ -17,6 +17,9 @@
 
 - Vite + React 19 + TypeScript
 - `zustand` + `persist` → localStorage（刷新保留全部状态）
+- Node + Express（同一服务提供登录 API 和构建后的前端）
+- PostgreSQL（用户与一次性邮箱验证码）
+- Resend（验证码邮件投递）
 - `pdfjs-dist` — 浏览器端 PDF 解析
 - `react-markdown` — 计划书渲染
 - 手写 SVG 雷达图
@@ -26,15 +29,25 @@
 
 ```bash
 npm install
-cp .env.example .env   # 填入 API key
-npm run dev
+cp .env.example .env   # 填入 Resend、数据库和 AI 配置
+npm run dev:api        # 终端一：Node API，默认 :8787
+npm run dev            # 终端二：Vite，默认 :5173
 ```
 
-> ⚠️ `VITE_*` 变量会打包进前端，浏览器可见。务必用中转站的限额 key，别用主账号 key，demo 后作废。
+生产部署时，先执行 `npm run build`，再执行 `npm start`。Node 会同时提供 `/api/*` 和 `dist/` 下的前端页面，适合作为一个 Zeabur 服务部署。
+
+### 环境变量
+
+- `DATABASE_URL`：PostgreSQL 连接串。
+- `AUTH_SESSION_SECRET`、`AUTH_CODE_SECRET`：两条不同的随机长字符串。
+- `RESEND_API_KEY`：仅服务端使用的 Resend API key。
+- `EMAIL_FROM`：Resend 已验证域名下的发件人，例如 `OPC Coach <login@example.com>`。
+
+`RESEND_API_KEY`、数据库连接和两个认证密钥**不能**以 `VITE_` 开头；只有 Node 能读取它们。现有 `VITE_OPENAI_API_KEY` 仍会暴露在浏览器，正式上线前应迁移为服务端 AI 调用。
 
 ## 演示脚本
 
-1. 登录页 → 点"登录，进入工作台"
+1. 登录页 → 获取邮箱验证码并登录
 2. 拖 PDF 或 Markdown 材料到空态页 → 输入项目名 → 创建
 3. 4 步进度条走完（后台是真的 AI 分析）→ 落到分析页
 4. 点某条行动建议的"带这条去追问" → 跳到 Chat，input 已预填
