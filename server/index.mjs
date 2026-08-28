@@ -31,6 +31,7 @@ const CODE_TTL_MS = 10 * 60 * 1000
 const RESEND_INTERVAL_MS = 60 * 1000
 const MAX_CODE_ATTEMPTS = 5
 const SESSION_COOKIE = 'opc_session'
+const SESSION_TTL_DAYS = 30
 
 function normalizeEmail(value) {
   return typeof value === 'string' ? value.trim().toLowerCase() : ''
@@ -51,12 +52,12 @@ function matchesCode(expected, actual) {
 }
 
 function setSession(res, email) {
-  const token = jwt.sign({ sub: email }, config.sessionSecret, { expiresIn: '7d' })
+  const token = jwt.sign({ sub: email }, config.sessionSecret, { expiresIn: `${SESSION_TTL_DAYS}d` })
   res.cookie(SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: 'lax',
     secure: config.isProduction,
-    maxAge: 7 * 24 * 60 * 60 * 1000,
+    maxAge: SESSION_TTL_DAYS * 24 * 60 * 60 * 1000,
     path: '/',
   })
 }
