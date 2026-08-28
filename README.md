@@ -18,7 +18,7 @@
 - Vite + React 19 + TypeScript
 - `zustand` + `persist` → localStorage（刷新保留全部状态）
 - Node + Express（同一服务提供登录 API 和构建后的前端）
-- PostgreSQL（用户与一次性邮箱验证码）
+- MySQL（用户与一次性邮箱验证码）
 - Resend（验证码邮件投递）
 - `pdfjs-dist` — 浏览器端 PDF 解析
 - `react-markdown` — 计划书渲染
@@ -38,7 +38,7 @@ npm run dev            # 终端二：Vite，默认 :5173
 
 ### 环境变量
 
-- `DATABASE_URL`：PostgreSQL 连接串。
+- `MYSQL_URL`：MySQL 连接串，例如 `mysql://USER:PASSWORD@HOST:3306/opc_sage`。
 - `AUTH_SESSION_SECRET`、`AUTH_CODE_SECRET`：两条不同的随机长字符串。
 - `RESEND_API_KEY`：仅服务端使用的 Resend API key。
 - `EMAIL_FROM`：Resend 已验证域名下的发件人，例如 `OPC Coach <login@example.com>`。

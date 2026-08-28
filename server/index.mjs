@@ -3,10 +3,10 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import express from 'express'
 import jwt from 'jsonwebtoken'
-import { Pool } from 'pg'
+import mysql from 'mysql2/promise'
 import { Resend } from 'resend'
 
-const required = ['DATABASE_URL', 'AUTH_SESSION_SECRET', 'AUTH_CODE_SECRET', 'RESEND_API_KEY', 'EMAIL_FROM']
+const required = ['MYSQL_URL', 'AUTH_SESSION_SECRET', 'AUTH_CODE_SECRET', 'RESEND_API_KEY', 'EMAIL_FROM']
 const missing = required.filter((name) => !process.env[name])
 if (missing.length) {
   throw new Error(`缺少服务端环境变量：${missing.join(', ')}`)
@@ -14,14 +14,14 @@ if (missing.length) {
 
 const config = {
   port: Number(process.env.PORT || 8787),
-  databaseUrl: process.env.DATABASE_URL,
+  mysqlUrl: process.env.MYSQL_URL,
   sessionSecret: process.env.AUTH_SESSION_SECRET,
   codeSecret: process.env.AUTH_CODE_SECRET,
   emailFrom: process.env.EMAIL_FROM,
   isProduction: process.env.NODE_ENV === 'production',
 }
 
-const pool = new Pool({ connectionString: config.databaseUrl })
+const pool = mysql.createPool({ uri: config.mysqlUrl, waitForConnections: true, connectionLimit: 10 })
 const resend = new Resend(process.env.RESEND_API_KEY)
 const app = express()
 app.disable('x-powered-by')
@@ -81,18 +81,20 @@ function currentUser(req) {
 async function initializeDatabase() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
-      email TEXT PRIMARY KEY,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      last_login_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    );
+      email VARCHAR(254) PRIMARY KEY,
+      created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+      last_login_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `)
 
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS email_login_codes (
-      email TEXT PRIMARY KEY,
-      code_hash TEXT NOT NULL,
-      expires_at TIMESTAMPTZ NOT NULL,
+      email VARCHAR(254) PRIMARY KEY,
+      code_hash VARCHAR(64) NOT NULL,
+      expires_at DATETIME(3) NOT NULL,
       attempts INTEGER NOT NULL DEFAULT 0,
-      sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    );
+      sent_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
   `)
 }
 
@@ -103,19 +105,20 @@ app.post('/api/auth/request-code', async (req, res, next) => {
   if (!isEmail(email)) return res.status(400).json({ error: '请输入有效的邮箱地址。' })
 
   try {
-    const existing = await pool.query('SELECT sent_at FROM email_login_codes WHERE email = $1', [email])
-    const lastSentAt = existing.rows[0]?.sent_at
+    await pool.execute('DELETE FROM email_login_codes WHERE expires_at <= CURRENT_TIMESTAMP(3)')
+    const [existing] = await pool.execute('SELECT sent_at FROM email_login_codes WHERE email = ?', [email])
+    const lastSentAt = existing[0]?.sent_at
     if (lastSentAt && Date.now() - new Date(lastSentAt).getTime() < RESEND_INTERVAL_MS) {
       return res.status(429).json({ error: '验证码刚发出，请稍候一分钟再试。' })
     }
 
     const code = randomInt(0, 1_000_000).toString().padStart(6, '0')
     const expiresAt = new Date(Date.now() + CODE_TTL_MS)
-    await pool.query(
+    await pool.execute(
       `INSERT INTO email_login_codes (email, code_hash, expires_at, attempts, sent_at)
-       VALUES ($1, $2, $3, 0, NOW())
-       ON CONFLICT (email) DO UPDATE
-       SET code_hash = EXCLUDED.code_hash, expires_at = EXCLUDED.expires_at, attempts = 0, sent_at = NOW()`,
+       VALUES (?, ?, ?, 0, CURRENT_TIMESTAMP(3))
+       ON DUPLICATE KEY UPDATE
+       code_hash = VALUES(code_hash), expires_at = VALUES(expires_at), attempts = 0, sent_at = CURRENT_TIMESTAMP(3)`,
       [email, codeHash(email, code), expiresAt],
     )
 
@@ -126,7 +129,7 @@ app.post('/api/auth/request-code', async (req, res, next) => {
       html: `<p>你的 OPC 军师登录验证码是：</p><p style="font-size:28px;font-weight:700;letter-spacing:6px">${code}</p><p>验证码 10 分钟内有效。若非本人操作，请忽略此邮件。</p>`,
     })
     if (error) {
-      await pool.query('DELETE FROM email_login_codes WHERE email = $1', [email])
+      await pool.execute('DELETE FROM email_login_codes WHERE email = ?', [email])
       return res.status(502).json({ error: '邮件发送失败，请稍后重试。' })
     }
 
@@ -144,30 +147,30 @@ app.post('/api/auth/verify-code', async (req, res, next) => {
   }
 
   try {
-    const result = await pool.query(
-      'SELECT code_hash, expires_at, attempts FROM email_login_codes WHERE email = $1',
+    const [rows] = await pool.execute(
+      'SELECT code_hash, expires_at, attempts FROM email_login_codes WHERE email = ?',
       [email],
     )
-    const record = result.rows[0]
+    const record = rows[0]
     if (!record || new Date(record.expires_at).getTime() < Date.now()) {
-      await pool.query('DELETE FROM email_login_codes WHERE email = $1', [email])
+      await pool.execute('DELETE FROM email_login_codes WHERE email = ?', [email])
       return res.status(400).json({ error: '验证码已失效，请重新获取。' })
     }
     if (record.attempts >= MAX_CODE_ATTEMPTS) {
-      await pool.query('DELETE FROM email_login_codes WHERE email = $1', [email])
+      await pool.execute('DELETE FROM email_login_codes WHERE email = ?', [email])
       return res.status(429).json({ error: '尝试次数过多，请重新获取验证码。' })
     }
     if (!matchesCode(record.code_hash, codeHash(email, code))) {
-      await pool.query('UPDATE email_login_codes SET attempts = attempts + 1 WHERE email = $1', [email])
+      await pool.execute('UPDATE email_login_codes SET attempts = attempts + 1 WHERE email = ?', [email])
       return res.status(400).json({ error: '验证码不正确。' })
     }
 
-    await pool.query(
-      `INSERT INTO users (email) VALUES ($1)
-       ON CONFLICT (email) DO UPDATE SET last_login_at = NOW()`,
+    await pool.execute(
+      `INSERT INTO users (email) VALUES (?)
+       ON DUPLICATE KEY UPDATE last_login_at = CURRENT_TIMESTAMP(3)`,
       [email],
     )
-    await pool.query('DELETE FROM email_login_codes WHERE email = $1', [email])
+    await pool.execute('DELETE FROM email_login_codes WHERE email = ?', [email])
     setSession(res, email)
     return res.json({ user: { email } })
   } catch (error) {
