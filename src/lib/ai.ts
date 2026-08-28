@@ -1,26 +1,47 @@
-// OpenAI compatible transit client (openai-next)
-import { REPORT_JSON_SHAPE, type ChatMessage, type EvaluationReport } from './schema'
+// OpenAI-compatible transit client (openai-next)
+// Provides three levels: text / JSON-structured / streaming
 
 const BASE_URL = import.meta.env.VITE_OPENAI_BASE_URL || 'https://api.openai-next.com/v1'
 const API_KEY = import.meta.env.VITE_OPENAI_API_KEY || ''
 const MODEL = import.meta.env.VITE_OPENAI_MODEL || 'gpt-5'
 
-interface ChatOptions {
-  jsonMode?: boolean
+export interface AIMessage {
+  role: 'system' | 'user' | 'assistant'
+  content: string
 }
 
-async function chat(messages: ChatMessage[], opts: ChatOptions = {}): Promise<string> {
+function requireKey() {
   if (!API_KEY) {
     throw new Error('缺少 API Key。请在 .env 里设置 VITE_OPENAI_API_KEY。')
   }
+}
 
-  const body: Record<string, unknown> = {
-    model: MODEL,
-    messages,
+/** Robust JSON extraction: strip ```json fences, take outermost {...}. */
+export function extractJson(raw: string): string {
+  let text = raw.trim()
+  const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/)
+  if (fence) text = fence[1].trim()
+  if (!text.startsWith('{')) {
+    const s = text.indexOf('{')
+    const e = text.lastIndexOf('}')
+    if (s >= 0 && e > s) text = text.slice(s, e + 1)
   }
-  if (opts.jsonMode) {
-    body.response_format = { type: 'json_object' }
-  }
+  return text
+}
+
+/** Plain text call. */
+export async function callAI(opts: {
+  system?: string
+  messages: AIMessage[]
+  jsonMode?: boolean
+}): Promise<string> {
+  requireKey()
+  const messages: AIMessage[] = opts.system
+    ? [{ role: 'system', content: opts.system }, ...opts.messages]
+    : opts.messages
+
+  const body: Record<string, unknown> = { model: MODEL, messages }
+  if (opts.jsonMode) body.response_format = { type: 'json_object' }
 
   const res = await fetch(`${BASE_URL}/chat/completions`, {
     method: 'POST',
@@ -35,7 +56,6 @@ async function chat(messages: ChatMessage[], opts: ChatOptions = {}): Promise<st
     const text = await res.text().catch(() => '')
     throw new Error(`AI 接口报错 ${res.status}: ${text.slice(0, 200)}`)
   }
-
   const data = await res.json()
   const content = data?.choices?.[0]?.message?.content
   if (typeof content !== 'string') {
@@ -44,82 +64,77 @@ async function chat(messages: ChatMessage[], opts: ChatOptions = {}): Promise<st
   return content
 }
 
-const SYSTEM_ADVISOR =
-  '你是一位顶级风险投资人和商业顾问，代号「军师」，擅长用红杉资本的 pitch 框架评估商业计划书。点评要犀利、具体、可落地，不说空话套话。'
-
-// 评估 BP，返回结构化报告
-export async function evaluateBP(bpText: string): Promise<EvaluationReport> {
-  const prompt = [
-    '请按红杉六维度评估下面这份商业计划书。',
-    '每个维度打分 0-10（10 最好），给出亮点和具体改进建议。',
-    '严格只输出如下 JSON，不要任何多余文字：',
-    REPORT_JSON_SHAPE,
-    '',
-    '=== 商业计划书 ===',
-    bpText,
-  ].join('\n')
-
-  const raw = await chat(
-    [
-      { role: 'user', content: SYSTEM_ADVISOR + '\n\n' + prompt },
-    ],
-    { jsonMode: true },
-  )
-  return parseReport(raw)
-}
-
-// 容错解析：中转有时会把 JSON 包在 ```json 代码块里，或前后带杂字
-function parseReport(raw: string): EvaluationReport {
-  let text = raw.trim()
-  // 去掉 markdown 代码围栏
-  const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/)
-  if (fence) text = fence[1].trim()
-  // 兜底：截取第一个 { 到最后一个 }
-  if (!text.startsWith('{')) {
-    const s = text.indexOf('{')
-    const e = text.lastIndexOf('}')
-    if (s >= 0 && e > s) text = text.slice(s, e + 1)
-  }
+/** Structured JSON call. Prompts must describe the JSON shape in `system` or `user`. */
+export async function callAIJson<T>(opts: {
+  system: string
+  user: string
+}): Promise<T> {
+  const raw = await callAI({
+    system: opts.system,
+    messages: [{ role: 'user', content: opts.user }],
+    jsonMode: true,
+  })
+  const cleaned = extractJson(raw)
   try {
-    return JSON.parse(text) as EvaluationReport
-  } catch {
-    throw new Error('军师返回的评估格式没解析出来，再试一次或换份 BP。')
+    return JSON.parse(cleaned) as T
+  } catch (e) {
+    console.error('AI JSON parse failed. Raw:', raw)
+    throw new Error('AI 返回的 JSON 解析失败，再试一次或换份材料。')
   }
 }
 
-// 追问：基于 BP + 报告 + 历史对话继续回答
-export async function askAdvisor(
-  bpText: string,
-  history: ChatMessage[],
-  question: string,
-): Promise<string> {
-  const context = [
-    { role: 'user' as const, content: SYSTEM_ADVISOR + '\n\n=== 商业计划书 ===\n' + bpText },
-    ...history,
-    { role: 'user' as const, content: question },
-  ]
-  return chat(context)
-}
+/** Streaming call. Delta chunks are pushed to onDelta as they arrive. */
+export async function callAIStream(opts: {
+  system?: string
+  messages: AIMessage[]
+  onDelta: (chunk: string) => void
+}): Promise<string> {
+  requireKey()
+  const messages: AIMessage[] = opts.system
+    ? [{ role: 'system', content: opts.system }, ...opts.messages]
+    : opts.messages
 
-// 综合原 BP + 对话，产出优化后的 BP（Markdown）
-export async function optimizeBP(
-  bpText: string,
-  history: ChatMessage[],
-): Promise<string> {
-  const convo = history
-    .map((m) => `${m.role === 'user' ? 'OPC' : '军师'}：${m.content}`)
-    .join('\n')
-  const prompt = [
-    SYSTEM_ADVISOR,
-    '',
-    '基于原始 BP 和下面的对话，产出一版优化后的商业计划书。',
-    '要求：结构清晰、用 Markdown 输出，覆盖红杉六维度，补齐原 BP 的短板。',
-    '',
-    '=== 原始 BP ===',
-    bpText,
-    '',
-    '=== 对话记录 ===',
-    convo || '（无）',
-  ].join('\n')
-  return chat([{ role: 'user', content: prompt }])
+  const res = await fetch(`${BASE_URL}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${API_KEY}`,
+    },
+    body: JSON.stringify({ model: MODEL, messages, stream: true }),
+  })
+  if (!res.ok || !res.body) {
+    const text = await res.text().catch(() => '')
+    throw new Error(`AI 接口报错 ${res.status}: ${text.slice(0, 200)}`)
+  }
+
+  const reader = res.body.getReader()
+  const decoder = new TextDecoder()
+  let full = ''
+  let buffer = ''
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+    // parse SSE events split by blank line, each line prefixed with `data: `
+    const lines = buffer.split('\n')
+    buffer = lines.pop() || ''
+    for (const line of lines) {
+      const l = line.trim()
+      if (!l.startsWith('data:')) continue
+      const payload = l.slice(5).trim()
+      if (!payload || payload === '[DONE]') continue
+      try {
+        const evt = JSON.parse(payload)
+        const delta = evt?.choices?.[0]?.delta?.content
+        if (typeof delta === 'string' && delta) {
+          full += delta
+          opts.onDelta(delta)
+        }
+      } catch {
+        // silently skip malformed chunks
+      }
+    }
+  }
+  return full
 }
