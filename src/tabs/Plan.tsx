@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAppStore, useCurrentProject } from '../store'
 import { generatePlan, generatePlanQuestions } from '../prompts/plan'
 import { MarkdownView } from '../components/MarkdownView'
+import { archiveProject } from '../lib/archive'
 
 export function Plan() {
   const project = useCurrentProject()
@@ -43,6 +44,17 @@ export function Plan() {
         project.planAnswers,
       )
       setPlan(plan)
+      void archiveProject({
+        projectId: project.id,
+        files: project.files,
+        analysis: project.analysis,
+        messages: project.messages,
+        planQuestions: project.planQuestions,
+        planAnswers: project.planAnswers,
+        plan,
+      }).catch((error) => {
+        console.warn('商业计划归档失败：', error)
+      })
       setPlanStage('done')
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))

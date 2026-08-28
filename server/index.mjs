@@ -41,7 +41,7 @@ const upload = multer({
 })
 const app = express()
 app.disable('x-powered-by')
-app.use(express.json({ limit: '16kb' }))
+app.use(express.json({ limit: '25mb' }))
 
 const CODE_TTL_MS = 10 * 60 * 1000
 const RESEND_INTERVAL_MS = 60 * 1000
@@ -161,9 +161,89 @@ app.post('/api/materials/upload', requireUploadConfig, uploadOne, async (req, re
         (error, data) => (error ? reject(error) : resolve(data)),
       )
     })
-    return res.json({ ok: true })
+    return res.json({ ok: true, storageKey: key })
   } catch (error) {
     return next(error)
+  }
+})
+
+function isUuid(value) {
+  return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+}
+
+function jsonOrNull(value) {
+  return value == null ? null : JSON.stringify(value)
+}
+
+function validateAttachmentArchive(body) {
+  if (!body || !isUuid(body.projectId)) return '项目标识无效。'
+  if (!Array.isArray(body.files) || body.files.length > 20) return '项目附件数量无效。'
+  for (const file of body.files) {
+    if (!file || typeof file !== 'object') return '附件信息无效。'
+    if (typeof file.id !== 'string' || file.id.length > 128) return '附件标识无效。'
+    if (typeof file.name !== 'string' || !file.name.trim() || file.name.length > 255) return '附件名称无效。'
+    if (!['PDF', 'MD'].includes(file.ext)) return '附件类型无效。'
+    if (typeof file.size !== 'string' || file.size.length > 32) return '附件大小信息无效。'
+    if (typeof file.content !== 'string') return '附件解析内容无效。'
+    if (file.storageKey != null && (typeof file.storageKey !== 'string' || file.storageKey.length > 512)) {
+      return '附件存储信息无效。'
+    }
+  }
+  return null
+}
+
+// 只写入归档，不提供对应读取接口；当前页面仍只使用本地 Zustand 状态。
+app.post('/api/archive/attachments', async (req, res, next) => {
+  const session = currentUser(req)
+  if (!session) return res.status(401).json({ error: '未登录' })
+
+  const validationError = validateAttachmentArchive(req.body)
+  if (validationError) return res.status(400).json({ error: validationError })
+
+  const { projectId, files, analysis, messages, planQuestions, planAnswers, plan } = req.body
+  const connection = await pool.getConnection()
+  try {
+    await connection.beginTransaction()
+    for (const file of files) {
+      await connection.execute(
+        `INSERT INTO attachment_archives
+           (uuid, user_uuid, client_project_uuid, client_attachment_uuid, object_storage_path,
+            file_name, file_size, analyzed_file_content, ai_dashboard_feedback,
+            ai_report_stream_feedback, optimization_plan_questions_answers, ai_business_plan_v2_content)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+           object_storage_path = COALESCE(VALUES(object_storage_path), object_storage_path),
+           file_name = VALUES(file_name), file_size = VALUES(file_size),
+           analyzed_file_content = VALUES(analyzed_file_content),
+           ai_dashboard_feedback = COALESCE(VALUES(ai_dashboard_feedback), ai_dashboard_feedback),
+           ai_report_stream_feedback = COALESCE(VALUES(ai_report_stream_feedback), ai_report_stream_feedback),
+           optimization_plan_questions_answers = COALESCE(VALUES(optimization_plan_questions_answers), optimization_plan_questions_answers),
+           ai_business_plan_v2_content = COALESCE(VALUES(ai_business_plan_v2_content), ai_business_plan_v2_content),
+           updated_at = CURRENT_TIMESTAMP(3)`,
+        [
+          randomUUID(),
+          session.uuid,
+          projectId,
+          file.id,
+          file.storageKey || null,
+          file.name,
+          file.size,
+          file.content,
+          jsonOrNull(analysis),
+          jsonOrNull(messages),
+          jsonOrNull({ questions: planQuestions ?? null, answers: planAnswers ?? null }),
+          jsonOrNull(plan),
+        ],
+      )
+    }
+
+    await connection.commit()
+    return res.json({ ok: true })
+  } catch (error) {
+    await connection.rollback()
+    return next(error)
+  } finally {
+    connection.release()
   }
 })
 

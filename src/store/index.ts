@@ -32,7 +32,7 @@ interface State {
 
   // ---- project lifecycle ----
   setDraftName: (n: string) => void
-  createProject: (name: string, files: FileItem[]) => void
+  createProject: (name: string, files: FileItem[]) => string
   switchProject: (id: string) => void
   deleteProject: (id: string) => void
   startRename: () => void
@@ -143,6 +143,7 @@ export const useAppStore = create<State>()(
           renaming: false,
           draftName: '',
         }))
+        return p.id
       },
       switchProject: (id) =>
         set((st) => {

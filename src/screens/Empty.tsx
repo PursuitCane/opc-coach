@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAppStore } from '../store'
 import { FileDropzone } from '../components/FileDropzone'
+import { archiveProject } from '../lib/archive'
 import type { FileItem, StagedFile } from '../store/types'
 
 function todayLabel(): string {
@@ -25,8 +26,13 @@ export function Empty() {
       from: '手动上传',
       used: '分析 / 计划',
       content: s.content,
+      storageKey: s.storageKey,
     }))
-    createProject(draftName || '未命名项目', files)
+    const projectName = draftName || '未命名项目'
+    const projectId = createProject(projectName, files)
+    void archiveProject({ projectId, files }).catch((error) => {
+      console.warn('项目附件归档失败：', error)
+    })
   }
 
   return (

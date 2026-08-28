@@ -1,4 +1,4 @@
-export async function uploadMaterial(file: File): Promise<void> {
+export async function uploadMaterial(file: File): Promise<{ storageKey?: string }> {
   const form = new FormData()
   form.append('file', file)
 
@@ -14,4 +14,7 @@ export async function uploadMaterial(file: File): Promise<void> {
       : '文件上传失败，请稍后重试。'
     throw new Error(message)
   }
+  return typeof data === 'object' && data && 'storageKey' in data && typeof data.storageKey === 'string'
+    ? { storageKey: data.storageKey }
+    : {}
 }

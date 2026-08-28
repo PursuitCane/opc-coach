@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAppStore, useCurrentProject } from '../store'
 import { streamCoach } from '../prompts/socratic'
+import { archiveProject } from '../lib/archive'
 
 const PROMPTS = [
   '我该先涨价还是先扩渠道？',
@@ -47,12 +48,23 @@ export function Chat() {
         ...(project.messages || []),
         { who: '我' as const, text },
       ]
-      await streamCoach({
+      const response = await streamCoach({
         analysis: project.analysis,
         messages: currentMessages,
         onDelta: (chunk) => {
           updateLastMessage((m) => ({ ...m, text: m.text + chunk }))
         },
+      })
+      void archiveProject({
+        projectId: project.id,
+        files: project.files,
+        analysis: project.analysis,
+        messages: [...currentMessages, { who: '教练', text: response }],
+        planQuestions: project.planQuestions,
+        planAnswers: project.planAnswers,
+        plan: project.plan,
+      }).catch((error) => {
+        console.warn('追问反馈归档失败：', error)
       })
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)

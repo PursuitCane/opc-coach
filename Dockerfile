@@ -6,7 +6,9 @@ FROM public.ecr.aws/docker/library/node:22-alpine AS build
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci
+# The build needs devDependencies such as TypeScript and Vite even when the
+# platform sets NODE_ENV=production for the image build.
+RUN npm ci --include=dev
 
 COPY . ./
 

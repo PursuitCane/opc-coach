@@ -15,6 +15,7 @@ export interface FileItem {
   from: string // 来源
   used: string // 已用于
   content: string // extracted text
+  storageKey?: string // COS object key; used only for server-side archive
 }
 
 export interface StagedFile {
@@ -22,6 +23,7 @@ export interface StagedFile {
   name: string
   size: string
   content: string
+  storageKey?: string
 }
 
 // ---------- Business analysis ----------

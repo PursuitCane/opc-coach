@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAppStore, useCurrentProject } from '../store'
 import { evaluateProject } from '../prompts/analysis'
+import { archiveProject } from '../lib/archive'
 
 const STEPS = [
   '正在提取材料的结构…',
@@ -35,6 +36,17 @@ export function Creating() {
       .then(({ analysis, planQuestions }) => {
         setAnalysis(project.id, analysis)
         if (planQuestions.length > 0) setPlanQuestions(project.id, planQuestions)
+        void archiveProject({
+          projectId: project.id,
+          files: project.files,
+          analysis,
+          messages: project.messages,
+          planQuestions,
+          planAnswers: project.planAnswers,
+          plan: project.plan,
+        }).catch((error) => {
+          console.warn('分析结果归档失败：', error)
+        })
         // 让进度条走完再落地
         setTimeout(() => {
           clearInterval(stepTimer)
