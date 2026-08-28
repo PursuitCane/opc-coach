@@ -19,7 +19,8 @@ CREATE TABLE IF NOT EXISTS email_login_codes (
 
 -- 附件归档：一条附件一条记录，当前前端只写入、不从此表读取。
 CREATE TABLE IF NOT EXISTS attachment_archives (
-  uuid CHAR(36) NOT NULL PRIMARY KEY COMMENT '归档记录唯一标识',
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '归档记录自增 ID',
+  uuid CHAR(36) NOT NULL COMMENT '业务 UUID，可对应多条归档记录',
   user_uuid CHAR(36) NOT NULL COMMENT '所属用户 UUID',
   client_project_uuid CHAR(36) NOT NULL COMMENT '前端项目 UUID',
   client_attachment_uuid VARCHAR(128) NOT NULL COMMENT '前端附件 UUID',
@@ -33,7 +34,5 @@ CREATE TABLE IF NOT EXISTS attachment_archives (
   ai_business_plan_v2_content LONGTEXT NULL COMMENT 'AI 生成的商业计划 v2 JSON',
   created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '首次归档时间',
   updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '最后更新时间',
-  UNIQUE KEY uq_attachment_archives_user_project_attachment
-    (user_uuid, client_project_uuid, client_attachment_uuid),
   CONSTRAINT fk_attachment_archives_user FOREIGN KEY (user_uuid) REFERENCES users(uuid)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='附件及 AI 产物归档表，仅写入备份，当前页面不读取';

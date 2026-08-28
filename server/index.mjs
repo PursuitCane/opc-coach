@@ -211,15 +211,7 @@ app.post('/api/archive/attachments', async (req, res, next) => {
             file_name, file_size, analyzed_file_content, ai_dashboard_feedback,
             ai_report_stream_feedback, optimization_plan_questions_answers, ai_business_plan_v2_content)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE
-           object_storage_path = COALESCE(VALUES(object_storage_path), object_storage_path),
-           file_name = VALUES(file_name), file_size = VALUES(file_size),
-           analyzed_file_content = VALUES(analyzed_file_content),
-           ai_dashboard_feedback = COALESCE(VALUES(ai_dashboard_feedback), ai_dashboard_feedback),
-           ai_report_stream_feedback = COALESCE(VALUES(ai_report_stream_feedback), ai_report_stream_feedback),
-           optimization_plan_questions_answers = COALESCE(VALUES(optimization_plan_questions_answers), optimization_plan_questions_answers),
-           ai_business_plan_v2_content = COALESCE(VALUES(ai_business_plan_v2_content), ai_business_plan_v2_content),
-           updated_at = CURRENT_TIMESTAMP(3)`,
+         `,
         [
           randomUUID(),
           session.uuid,
