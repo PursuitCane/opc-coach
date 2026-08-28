@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { devLogin, requestEmailCode, verifyEmailCode } from '../lib/auth'
 
 interface Props {
@@ -9,9 +9,20 @@ export function Auth({ onAuthenticated }: Props) {
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
   const [sent, setSent] = useState(false)
+  const [cooldown, setCooldown] = useState(0)
   const [busy, setBusy] = useState(false)
   const [devBusy, setDevBusy] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (cooldown <= 0) return
+
+    const timer = window.setInterval(() => {
+      setCooldown((remaining) => Math.max(remaining - 1, 0))
+    }, 1000)
+
+    return () => window.clearInterval(timer)
+  }, [cooldown])
 
   const sendCode = async () => {
     setError('')
@@ -19,6 +30,7 @@ export function Auth({ onAuthenticated }: Props) {
     try {
       await requestEmailCode(email)
       setSent(true)
+      setCooldown(60)
     } catch (e) {
       setError(e instanceof Error ? e.message : '验证码发送失败。')
     } finally {
@@ -79,8 +91,12 @@ export function Auth({ onAuthenticated }: Props) {
             onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))}
             disabled={busy || !sent}
           />
-          <button className="btn btn-secondary" onClick={sendCode} disabled={busy || !email.trim()}>
-            {busy ? '发送中…' : sent ? '重新发送' : '获取验证码'}
+          <button
+            className="btn btn-secondary"
+            onClick={sendCode}
+            disabled={busy || cooldown > 0 || !email.trim()}
+          >
+            {busy ? '发送中…' : cooldown > 0 ? `${cooldown}秒后重试` : sent ? '重新发送' : '获取验证码'}
           </button>
         </div>
       </div>
