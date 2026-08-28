@@ -1,4 +1,4 @@
-# Build the Vite/React static bundle.
+# Build the Vite/React client.
 # Docker Official Images mirrored on Amazon ECR Public. This avoids shared
 # Docker Hub anonymous-pull limits in managed builders such as Zeabur.
 FROM public.ecr.aws/docker/library/node:22-alpine AS build
@@ -8,24 +8,32 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 
-COPY . .
-# Vite reads VITE_* variables at build time. Configure these as Zeabur build
-# arguments (or let Zeabur expose the matching variables during image build).
+COPY . ./
+
+# Vite reads VITE_* variables at build time.
 ARG VITE_OPENAI_BASE_URL
 ARG VITE_OPENAI_API_KEY
 ARG VITE_OPENAI_MODEL
 ENV VITE_OPENAI_BASE_URL=$VITE_OPENAI_BASE_URL \
     VITE_OPENAI_API_KEY=$VITE_OPENAI_API_KEY \
     VITE_OPENAI_MODEL=$VITE_OPENAI_MODEL
+
 RUN npm run build
 
-# Serve the bundle with SPA fallback for client-side navigation.
-FROM public.ecr.aws/docker/library/nginx:1.27-alpine
+# Run the email-auth API and serve the built client from the same process.
+FROM public.ecr.aws/docker/library/node:22-alpine AS production
 
-COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx/default.conf.template /etc/nginx/conf.d/default.conf.template
+ENV NODE_ENV=production
+WORKDIR /app
 
-ENV PORT=8080
-EXPOSE 8080
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev && npm cache clean --force
 
-CMD ["sh", "-c", "envsubst '\\$PORT' < /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf && exec nginx -g 'daemon off;'"]
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/server ./server
+
+USER node
+EXPOSE 8787
+
+# Zeabur sets PORT automatically; the server falls back to 8787 for local Docker runs.
+CMD ["npm", "start"]
