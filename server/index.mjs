@@ -1,9 +1,11 @@
 import { createHash, randomInt, randomUUID, timingSafeEqual } from 'node:crypto'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import COS from 'cos-nodejs-sdk-v5'
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import mysql from 'mysql2/promise'
+import multer from 'multer'
 import { Resend } from 'resend'
 
 const required = ['MYSQL_URL', 'AUTH_SESSION_SECRET', 'AUTH_CODE_SECRET', 'RESEND_API_KEY', 'EMAIL_FROM']
@@ -18,11 +20,25 @@ const config = {
   sessionSecret: process.env.AUTH_SESSION_SECRET,
   codeSecret: process.env.AUTH_CODE_SECRET,
   emailFrom: process.env.EMAIL_FROM,
+  environment: process.env.NODE_ENV || 'development',
   isProduction: process.env.NODE_ENV === 'production',
+  cos: {
+    secretId: process.env.COS_SECRET_ID,
+    secretKey: process.env.COS_SECRET_KEY,
+    region: process.env.COS_REGION,
+    bucket: process.env.COS_BUCKET,
+  },
 }
 
 const pool = mysql.createPool({ uri: config.mysqlUrl, waitForConnections: true, connectionLimit: 10 })
 const resend = new Resend(process.env.RESEND_API_KEY)
+const cos = config.cos.secretId && config.cos.secretKey && config.cos.region && config.cos.bucket
+  ? new COS({ SecretId: config.cos.secretId, SecretKey: config.cos.secretKey })
+  : null
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024, files: 1 },
+})
 const app = express()
 app.disable('x-powered-by')
 app.use(express.json({ limit: '16kb' }))
@@ -39,6 +55,17 @@ function normalizeEmail(value) {
 
 function isEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) && value.length <= 254
+}
+
+function isLocalDevelopmentRequest(req) {
+  if (config.isProduction) return false
+  return ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket.remoteAddress)
+}
+
+function decodeUploadedFileName(name) {
+  if (typeof name !== 'string' || !/[\u0080-\u00ff]/.test(name)) return name
+  const decoded = Buffer.from(name, 'latin1').toString('utf8')
+  return decoded.includes('\uFFFD') ? name : decoded
 }
 
 function codeHash(email, code) {
@@ -81,13 +108,77 @@ function currentUser(req) {
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }))
 
+function safeFileName(name) {
+  const base = path.basename(typeof name === 'string' ? name : 'material')
+  return base.replace(/[^\p{L}\p{N}._-]+/gu, '_').slice(0, 180) || 'material'
+}
+
+function objectKeyFor(fileName) {
+  const now = new Date()
+  const year = String(now.getFullYear())
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  const safeName = safeFileName(decodeUploadedFileName(fileName))
+  const extension = path.extname(safeName)
+  const stem = extension ? safeName.slice(0, -extension.length) : safeName
+  const suffix = randomInt(0, 1_000_000).toString().padStart(6, '0')
+  return `upload/${config.environment}/${year}/${month}/${day}/${stem}-${suffix}${extension}`
+}
+
+function requireUploadConfig(req, res, next) {
+  const session = currentUser(req)
+  if (!session) return res.status(401).json({ error: '未登录' })
+  if (!cos) return res.status(503).json({ error: '文件存储服务未配置，请联系管理员。' })
+  return next()
+}
+
+function uploadOne(req, res, next) {
+  upload.single('file')(req, res, (error) => {
+    if (!error) return next()
+    if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({ error: '文件超过 10MB。' })
+    }
+    return res.status(400).json({ error: '文件上传失败，请重试。' })
+  })
+}
+
+app.post('/api/materials/upload', requireUploadConfig, uploadOne, async (req, res, next) => {
+  if (!req.file) return res.status(400).json({ error: '请选择要上传的文件。' })
+
+  const file = req.file
+  const key = objectKeyFor(file.originalname)
+
+  try {
+    await new Promise((resolve, reject) => {
+      cos.putObject(
+        {
+          Bucket: config.cos.bucket,
+          Region: config.cos.region,
+          Key: key,
+          Body: file.buffer,
+          ContentType: file.mimetype || 'application/octet-stream',
+        },
+        (error, data) => (error ? reject(error) : resolve(data)),
+      )
+    })
+    return res.json({ ok: true })
+  } catch (error) {
+    return next(error)
+  }
+})
+
 app.post('/api/auth/request-code', async (req, res, next) => {
   const email = normalizeEmail(req.body?.email)
   if (!isEmail(email)) return res.status(400).json({ error: '请输入有效的邮箱地址。' })
 
   try {
-    await pool.execute('DELETE FROM email_login_codes WHERE expires_at <= CURRENT_TIMESTAMP(3)')
-    const [existing] = await pool.execute('SELECT sent_at FROM email_login_codes WHERE email = ?', [email])
+    await pool.execute(
+      'UPDATE email_login_codes SET deleted_at = CURRENT_TIMESTAMP(3) WHERE expires_at <= CURRENT_TIMESTAMP(3) AND deleted_at IS NULL',
+    )
+    const [existing] = await pool.execute(
+      'SELECT sent_at FROM email_login_codes WHERE email = ? AND deleted_at IS NULL',
+      [email],
+    )
     const lastSentAt = existing[0]?.sent_at
     if (lastSentAt && Date.now() - new Date(lastSentAt).getTime() < RESEND_INTERVAL_MS) {
       return res.status(429).json({ error: '验证码刚发出，请稍候一分钟再试。' })
@@ -96,10 +187,11 @@ app.post('/api/auth/request-code', async (req, res, next) => {
     const code = randomInt(0, 1_000_000).toString().padStart(6, '0')
     const expiresAt = new Date(Date.now() + CODE_TTL_MS)
     await pool.execute(
-      `INSERT INTO email_login_codes (email, code_hash, expires_at, attempts, sent_at)
-       VALUES (?, ?, ?, 0, CURRENT_TIMESTAMP(3))
+      `INSERT INTO email_login_codes (email, code_hash, expires_at, attempts, sent_at, deleted_at)
+       VALUES (?, ?, ?, 0, CURRENT_TIMESTAMP(3), NULL)
        ON DUPLICATE KEY UPDATE
-       code_hash = VALUES(code_hash), expires_at = VALUES(expires_at), attempts = 0, sent_at = CURRENT_TIMESTAMP(3)`,
+       code_hash = VALUES(code_hash), expires_at = VALUES(expires_at), attempts = 0,
+       sent_at = CURRENT_TIMESTAMP(3), deleted_at = NULL`,
       [email, codeHash(email, code), expiresAt],
     )
 
@@ -110,7 +202,10 @@ app.post('/api/auth/request-code', async (req, res, next) => {
       html: `<p>你的 OPC 军师登录验证码是：</p><p style="font-size:28px;font-weight:700;letter-spacing:6px">${code}</p><p>验证码 10 分钟内有效。若非本人操作，请忽略此邮件。</p>`,
     })
     if (error) {
-      await pool.execute('DELETE FROM email_login_codes WHERE email = ?', [email])
+      await pool.execute(
+        'UPDATE email_login_codes SET deleted_at = CURRENT_TIMESTAMP(3) WHERE email = ? AND deleted_at IS NULL',
+        [email],
+      )
       return res.status(502).json({ error: '邮件发送失败，请稍后重试。' })
     }
 
@@ -129,20 +224,29 @@ app.post('/api/auth/verify-code', async (req, res, next) => {
 
   try {
     const [rows] = await pool.execute(
-      'SELECT code_hash, expires_at, attempts FROM email_login_codes WHERE email = ?',
+      'SELECT code_hash, expires_at, attempts FROM email_login_codes WHERE email = ? AND deleted_at IS NULL',
       [email],
     )
     const record = rows[0]
     if (!record || new Date(record.expires_at).getTime() < Date.now()) {
-      await pool.execute('DELETE FROM email_login_codes WHERE email = ?', [email])
+      await pool.execute(
+        'UPDATE email_login_codes SET deleted_at = CURRENT_TIMESTAMP(3) WHERE email = ? AND deleted_at IS NULL',
+        [email],
+      )
       return res.status(400).json({ error: '验证码已失效，请重新获取。' })
     }
     if (record.attempts >= MAX_CODE_ATTEMPTS) {
-      await pool.execute('DELETE FROM email_login_codes WHERE email = ?', [email])
+      await pool.execute(
+        'UPDATE email_login_codes SET deleted_at = CURRENT_TIMESTAMP(3) WHERE email = ? AND deleted_at IS NULL',
+        [email],
+      )
       return res.status(429).json({ error: '尝试次数过多，请重新获取验证码。' })
     }
     if (!matchesCode(record.code_hash, codeHash(email, code))) {
-      await pool.execute('UPDATE email_login_codes SET attempts = attempts + 1 WHERE email = ?', [email])
+      await pool.execute(
+        'UPDATE email_login_codes SET attempts = attempts + 1 WHERE email = ? AND deleted_at IS NULL',
+        [email],
+      )
       return res.status(400).json({ error: '验证码不正确。' })
     }
 
@@ -154,7 +258,32 @@ app.post('/api/auth/verify-code', async (req, res, next) => {
     const [users] = await pool.execute('SELECT uuid, email FROM users WHERE email = ?', [email])
     const user = users[0]
     if (!user) return next(new Error('用户创建失败。'))
-    await pool.execute('DELETE FROM email_login_codes WHERE email = ?', [email])
+    await pool.execute(
+      'UPDATE email_login_codes SET deleted_at = CURRENT_TIMESTAMP(3) WHERE email = ? AND deleted_at IS NULL',
+      [email],
+    )
+    setSession(res, user.uuid)
+    return res.json({ user })
+  } catch (error) {
+    return next(error)
+  }
+})
+
+app.post('/api/auth/dev-login', async (req, res, next) => {
+  if (!isLocalDevelopmentRequest(req)) return res.status(404).json({ error: '接口不存在。' })
+
+  const email = normalizeEmail(req.body?.email) || 'dev@example.com'
+  if (!isEmail(email)) return res.status(400).json({ error: '请输入有效的邮箱地址。' })
+
+  try {
+    await pool.execute(
+      `INSERT INTO users (uuid, email) VALUES (?, ?)
+       ON DUPLICATE KEY UPDATE last_login_at = CURRENT_TIMESTAMP(3)`,
+      [randomUUID(), email],
+    )
+    const [users] = await pool.execute('SELECT uuid, email FROM users WHERE email = ?', [email])
+    const user = users[0]
+    if (!user) return next(new Error('用户创建失败。'))
     setSession(res, user.uuid)
     return res.json({ user })
   } catch (error) {

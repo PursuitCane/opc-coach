@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { requestEmailCode, verifyEmailCode } from '../lib/auth'
+import { devLogin, requestEmailCode, verifyEmailCode } from '../lib/auth'
 
 interface Props {
   onAuthenticated: () => void
@@ -10,6 +10,7 @@ export function Auth({ onAuthenticated }: Props) {
   const [code, setCode] = useState('')
   const [sent, setSent] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [devBusy, setDevBusy] = useState(false)
   const [error, setError] = useState('')
 
   const sendCode = async () => {
@@ -35,6 +36,19 @@ export function Auth({ onAuthenticated }: Props) {
       setError(e instanceof Error ? e.message : '登录失败。')
     } finally {
       setBusy(false)
+    }
+  }
+
+  const loginWithoutCode = async () => {
+    setError('')
+    setDevBusy(true)
+    try {
+      await devLogin(email)
+      onAuthenticated()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '本地登录失败。')
+    } finally {
+      setDevBusy(false)
     }
   }
 
@@ -71,14 +85,27 @@ export function Auth({ onAuthenticated }: Props) {
         </div>
       </div>
       {error && <small style={{ color: '#fca5a5' }}>{error}</small>}
-      <button
-        className="btn btn-primary btn-block"
-        style={{ height: 40 }}
-        onClick={verifyCode}
-        disabled={busy || !sent || code.length !== 6}
-      >
-        {busy && sent ? '验证中…' : '登录，进入工作台'}
-      </button>
+      <div className="landing-auth-actions">
+        <button
+          className="btn btn-primary btn-block"
+          style={{ height: 40 }}
+          onClick={verifyCode}
+          disabled={busy || !sent || code.length !== 6}
+        >
+          {busy && sent ? '验证中…' : '登录，进入工作台'}
+        </button>
+        {import.meta.env.MODE === 'development' && (
+          <button
+            className="btn btn-secondary landing-dev-login"
+            style={{ height: 40 }}
+            onClick={loginWithoutCode}
+            disabled={busy || devBusy}
+            title="仅本地开发环境可用"
+          >
+            {devBusy ? '登录中…' : '本地免验证码'}
+          </button>
+        )}
+      </div>
       <small>登录即表示同意服务条款与隐私政策</small>
     </div>
   )

@@ -20,6 +20,7 @@
 - Node + Express（同一服务提供登录 API 和构建后的前端）
 - MySQL（用户与一次性邮箱验证码）
 - Resend（验证码邮件投递）
+- 腾讯云 COS（材料原文件存储）
 - `pdfjs-dist` — 浏览器端 PDF 解析
 - `react-markdown` — 计划书渲染
 - 手写 SVG 雷达图
@@ -38,10 +39,13 @@ npm run dev            # 终端二：Vite，默认 :5173
 
 ### 环境变量
 
-- `MYSQL_URL`：MySQL 连接串，例如 `mysql://USER:PASSWORD@HOST:3306/opc_sage`。
+- `MYSQL_URL`：MySQL 连接串，例如 `mysql://USER:PASSWORD@HOST:3306/opc_coach`。
 - `AUTH_SESSION_SECRET`、`AUTH_CODE_SECRET`：两条不同的随机长字符串。
 - `RESEND_API_KEY`：仅服务端使用的 Resend API key。
 - `EMAIL_FROM`：Resend 已验证域名下的发件人，例如 `OPC Coach <login@example.com>`。
+- `COS_SECRET_ID`、`COS_SECRET_KEY`：腾讯云 API 密钥，仅服务端使用。
+- `COS_REGION`：COS 存储桶地域，例如 `ap-guangzhou`。
+- `COS_BUCKET`：COS 存储桶名称（包含 AppID 后缀）。
 
 `RESEND_API_KEY`、数据库连接和两个认证密钥**不能**以 `VITE_` 开头；只有 Node 能读取它们。现有 `VITE_OPENAI_API_KEY` 仍会暴露在浏览器，正式上线前应迁移为服务端 AI 调用。
 

@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { extractPdfText } from '../lib/pdf'
 import { extractMdText } from '../lib/md'
+import { uploadMaterial } from '../lib/materials'
 import type { StagedFile } from '../store/types'
 
 interface Props {
@@ -38,6 +39,7 @@ export function FileDropzone({ onStaged, compact }: Props) {
         if (f.size > MAX_SIZE) {
           throw new Error(`${f.name} 超过 10MB。`)
         }
+        await uploadMaterial(f)
         const content = isPdf ? await extractPdfText(f) : await extractMdText(f)
         out.push({
           ext: isPdf ? 'PDF' : 'MD',

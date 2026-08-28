@@ -31,6 +31,14 @@ export async function verifyEmailCode(email: string, code: string): Promise<Auth
   return data.user
 }
 
+export async function devLogin(email: string): Promise<AuthUser> {
+  const data = await request<{ user: AuthUser }>('/api/auth/dev-login', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  })
+  return data.user
+}
+
 export async function getCurrentUser(): Promise<AuthUser | null> {
   try {
     const data = await request<{ user: AuthUser }>('/api/auth/me')
