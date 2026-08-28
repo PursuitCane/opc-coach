@@ -79,40 +79,6 @@ function currentUser(req) {
   }
 }
 
-async function initializeDatabase() {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS users (
-      uuid CHAR(36) PRIMARY KEY,
-      email VARCHAR(254) NOT NULL UNIQUE,
-      created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-      last_login_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-  `)
-
-  const [userColumns] = await pool.query('SHOW COLUMNS FROM users')
-  if (!userColumns.some((column) => column.Field === 'uuid')) {
-    await pool.query('ALTER TABLE users ADD COLUMN uuid CHAR(36) NULL FIRST')
-    await pool.query('UPDATE users SET uuid = UUID() WHERE uuid IS NULL')
-    await pool.query(`
-      ALTER TABLE users
-        MODIFY COLUMN uuid CHAR(36) NOT NULL,
-        DROP PRIMARY KEY,
-        ADD PRIMARY KEY (uuid),
-        ADD UNIQUE KEY users_email_unique (email)
-    `)
-  }
-
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS email_login_codes (
-      email VARCHAR(254) PRIMARY KEY,
-      code_hash VARCHAR(64) NOT NULL,
-      expires_at DATETIME(3) NOT NULL,
-      attempts INTEGER NOT NULL DEFAULT 0,
-      sent_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-  `)
-}
-
 app.get('/api/health', (_req, res) => res.json({ ok: true }))
 
 app.post('/api/auth/request-code', async (req, res, next) => {
@@ -227,9 +193,4 @@ app.use((req, res) => {
   return res.sendFile(path.join(dist, 'index.html'))
 })
 
-initializeDatabase()
-  .then(() => app.listen(config.port, () => console.log(`OPC 军师运行在 :${config.port}`)))
-  .catch((error) => {
-    console.error('数据库初始化失败', error)
-    process.exit(1)
-  })
+app.listen(config.port, () => console.log(`OPC 军师运行在 :${config.port}`))

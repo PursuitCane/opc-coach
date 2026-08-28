@@ -49,7 +49,6 @@ export function Auth({ onAuthenticated }: Props) {
           type="email"
           value={email}
           autoComplete="email"
-          placeholder="you@example.com"
           onChange={(event) => setEmail(event.target.value)}
           disabled={busy || sent}
         />
@@ -63,7 +62,6 @@ export function Auth({ onAuthenticated }: Props) {
             autoComplete="one-time-code"
             maxLength={6}
             value={code}
-            placeholder="· · · · · ·"
             onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))}
             disabled={busy || !sent}
           />
