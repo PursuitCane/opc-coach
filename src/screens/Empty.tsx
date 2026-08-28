@@ -30,7 +30,7 @@ export function Empty() {
     }))
     const projectName = draftName || '未命名项目'
     const projectId = createProject(projectName, files)
-    void archiveProject({ projectId, files }).catch((error) => {
+    void archiveProject({ projectId, projectName, files }).catch((error) => {
       console.warn('项目附件归档失败：', error)
     })
   }

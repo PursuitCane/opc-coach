@@ -57,6 +57,7 @@ export function Chat() {
       })
       void archiveProject({
         projectId: project.id,
+        projectName: project.name,
         files: project.files,
         analysis: project.analysis,
         messages: [...currentMessages, { who: '教练', text: response }],

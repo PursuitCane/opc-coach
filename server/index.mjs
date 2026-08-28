@@ -177,6 +177,9 @@ function jsonOrNull(value) {
 
 function validateAttachmentArchive(body) {
   if (!body || !isUuid(body.projectId)) return '项目标识无效。'
+  if (typeof body.projectName !== 'string' || !body.projectName.trim() || body.projectName.length > 255) {
+    return '项目名称无效。'
+  }
   if (!Array.isArray(body.files) || body.files.length > 20) return '项目附件数量无效。'
   for (const file of body.files) {
     if (!file || typeof file !== 'object') return '附件信息无效。'
@@ -192,6 +195,34 @@ function validateAttachmentArchive(body) {
   return null
 }
 
+function validateDiaryArchive(body) {
+  if (!body || !isUuid(body.projectId)) return '项目标识无效。'
+  if (!body.diaryEntry || typeof body.diaryEntry !== 'object') return '日记内容无效。'
+  if (typeof body.coachLine !== 'string' || body.coachLine.length > 2000) return '教练提醒无效。'
+  return null
+}
+
+app.post('/api/archive/diary', async (req, res, next) => {
+  const session = currentUser(req)
+  if (!session) return res.status(401).json({ error: '未登录' })
+
+  const validationError = validateDiaryArchive(req.body)
+  if (validationError) return res.status(400).json({ error: validationError })
+
+  const { projectId, diaryEntry, coachLine } = req.body
+  try {
+    await pool.execute(
+      `INSERT INTO project_diary_archives
+         (uuid, client_project_uuid, diary_entry_json, coach_line)
+       VALUES (?, ?, ?, ?)`,
+      [session.uuid, projectId, JSON.stringify(diaryEntry), coachLine],
+    )
+    return res.json({ ok: true })
+  } catch (error) {
+    return next(error)
+  }
+})
+
 // 只写入归档，不提供对应读取接口；当前页面仍只使用本地 Zustand 状态。
 app.post('/api/archive/attachments', async (req, res, next) => {
   const session = currentUser(req)
@@ -200,31 +231,63 @@ app.post('/api/archive/attachments', async (req, res, next) => {
   const validationError = validateAttachmentArchive(req.body)
   if (validationError) return res.status(400).json({ error: validationError })
 
-  const { projectId, files, analysis, messages, planQuestions, planAnswers, plan } = req.body
+  const { projectId, projectName, files, analysis, messages, planQuestions, planAnswers, plan, analysisRun } = req.body
   const connection = await pool.getConnection()
   try {
     await connection.beginTransaction()
+
+    let analysisVersion = null
+    let analyzedAt = null
+    if (analysisRun === true && analysis != null) {
+      const [rows] = await connection.execute(
+        `SELECT COALESCE(MAX(analysis_version), 0) AS max_version
+           FROM attachment_archives
+          WHERE uuid = ? AND client_project_uuid = ?`,
+        [session.uuid, projectId],
+      )
+      analysisVersion = Number(rows[0]?.max_version || 0) + 1
+      analyzedAt = new Date()
+    }
+
+    // 对话消息独立归档到项目交互表，不写入附件归档表。
+    if (messages !== undefined) {
+      await connection.execute(
+        `INSERT INTO project_conversation_archives
+           (uuid, client_project_uuid, chat_messages_json)
+         VALUES (?, ?, ?, ?)
+         `,
+        [
+          session.uuid,
+          projectId,
+          jsonOrNull(messages),
+        ],
+      )
+    }
+
     for (const file of files) {
       await connection.execute(
         `INSERT INTO attachment_archives
-           (uuid, user_uuid, client_project_uuid, client_attachment_uuid, object_storage_path,
+           (uuid, client_project_uuid, project_name, client_attachment_uuid, object_storage_path,
             file_name, file_size, analyzed_file_content, ai_dashboard_feedback,
-            ai_report_stream_feedback, optimization_plan_questions_answers, ai_business_plan_v2_content)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            plan_questions_answers_json, ai_business_plan_v2_content, analysis_version, analyzed_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          `,
         [
-          randomUUID(),
           session.uuid,
           projectId,
+          projectName,
           file.id,
           file.storageKey || null,
           file.name,
           file.size,
           file.content,
           jsonOrNull(analysis),
-          jsonOrNull(messages),
-          jsonOrNull({ questions: planQuestions ?? null, answers: planAnswers ?? null }),
+          planQuestions !== undefined || planAnswers !== undefined
+            ? jsonOrNull({ questions: planQuestions ?? null, answers: planAnswers ?? null })
+            : null,
           jsonOrNull(plan),
+          analysisVersion,
+          analyzedAt,
         ],
       )
     }

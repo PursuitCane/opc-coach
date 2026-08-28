@@ -38,8 +38,10 @@ export function Creating() {
         if (planQuestions.length > 0) setPlanQuestions(project.id, planQuestions)
         void archiveProject({
           projectId: project.id,
+          projectName: project.name,
           files: project.files,
           analysis,
+          analysisRun: true,
           messages: project.messages,
           planQuestions,
           planAnswers: project.planAnswers,

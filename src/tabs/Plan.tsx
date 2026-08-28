@@ -46,6 +46,7 @@ export function Plan() {
       setPlan(plan)
       void archiveProject({
         projectId: project.id,
+        projectName: project.name,
         files: project.files,
         analysis: project.analysis,
         messages: project.messages,

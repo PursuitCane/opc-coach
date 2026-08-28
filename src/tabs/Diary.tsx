@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAppStore, useCurrentProject } from '../store'
 import { generateCoachLine, summarizeChatToDiary } from '../prompts/diary'
+import { archiveDiary } from '../lib/archive'
 
 const HEATBG = ['#2b2741', '#423a6a', '#5d5294', '#9184d9']
 
@@ -25,6 +26,13 @@ export function Diary() {
       // 顺手更新一下教练一句话
       const line = await generateCoachLine([entry, ...project.diary], project.analysis)
       setCoachLine(line)
+      void archiveDiary({
+        projectId: project.id,
+        diaryEntry: entry,
+        coachLine: line,
+      }).catch((error) => {
+        console.warn('成长记录归档失败：', error)
+      })
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
