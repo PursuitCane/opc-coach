@@ -1,4 +1,4 @@
-import { createHash, randomInt, timingSafeEqual } from 'node:crypto'
+import { createHash, randomInt, randomUUID, timingSafeEqual } from 'node:crypto'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import express from 'express'
@@ -51,8 +51,8 @@ function matchesCode(expected, actual) {
   return expectedBuffer.length === actualBuffer.length && timingSafeEqual(expectedBuffer, actualBuffer)
 }
 
-function setSession(res, email) {
-  const token = jwt.sign({ sub: email }, config.sessionSecret, { expiresIn: `${SESSION_TTL_DAYS}d` })
+function setSession(res, uuid) {
+  const token = jwt.sign({ sub: uuid }, config.sessionSecret, { expiresIn: `${SESSION_TTL_DAYS}d` })
   res.cookie(SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: 'lax',
@@ -73,7 +73,7 @@ function currentUser(req) {
   if (!token) return null
   try {
     const payload = jwt.verify(token, config.sessionSecret)
-    return typeof payload === 'object' && typeof payload.sub === 'string' ? { email: payload.sub } : null
+    return typeof payload === 'object' && typeof payload.sub === 'string' ? { uuid: payload.sub } : null
   } catch {
     return null
   }
@@ -82,11 +82,25 @@ function currentUser(req) {
 async function initializeDatabase() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
-      email VARCHAR(254) PRIMARY KEY,
+      uuid CHAR(36) PRIMARY KEY,
+      email VARCHAR(254) NOT NULL UNIQUE,
       created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
       last_login_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
   `)
+
+  const [userColumns] = await pool.query('SHOW COLUMNS FROM users')
+  if (!userColumns.some((column) => column.Field === 'uuid')) {
+    await pool.query('ALTER TABLE users ADD COLUMN uuid CHAR(36) NULL FIRST')
+    await pool.query('UPDATE users SET uuid = UUID() WHERE uuid IS NULL')
+    await pool.query(`
+      ALTER TABLE users
+        MODIFY COLUMN uuid CHAR(36) NOT NULL,
+        DROP PRIMARY KEY,
+        ADD PRIMARY KEY (uuid),
+        ADD UNIQUE KEY users_email_unique (email)
+    `)
+  }
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS email_login_codes (
@@ -167,22 +181,32 @@ app.post('/api/auth/verify-code', async (req, res, next) => {
     }
 
     await pool.execute(
-      `INSERT INTO users (email) VALUES (?)
+      `INSERT INTO users (uuid, email) VALUES (?, ?)
        ON DUPLICATE KEY UPDATE last_login_at = CURRENT_TIMESTAMP(3)`,
-      [email],
+      [randomUUID(), email],
     )
+    const [users] = await pool.execute('SELECT uuid, email FROM users WHERE email = ?', [email])
+    const user = users[0]
+    if (!user) return next(new Error('用户创建失败。'))
     await pool.execute('DELETE FROM email_login_codes WHERE email = ?', [email])
-    setSession(res, email)
-    return res.json({ user: { email } })
+    setSession(res, user.uuid)
+    return res.json({ user })
   } catch (error) {
     return next(error)
   }
 })
 
-app.get('/api/auth/me', (req, res) => {
-  const user = currentUser(req)
-  if (!user) return res.status(401).json({ error: '未登录' })
-  return res.json({ user })
+app.get('/api/auth/me', async (req, res, next) => {
+  const session = currentUser(req)
+  if (!session) return res.status(401).json({ error: '未登录' })
+  try {
+    const [users] = await pool.execute('SELECT uuid, email FROM users WHERE uuid = ?', [session.uuid])
+    const user = users[0]
+    if (!user) return res.status(401).json({ error: '未登录' })
+    return res.json({ user })
+  } catch (error) {
+    return next(error)
+  }
 })
 
 app.post('/api/auth/logout', (_req, res) => {
