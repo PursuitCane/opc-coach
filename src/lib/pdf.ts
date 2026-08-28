@@ -2,7 +2,10 @@
 import * as pdfjsLib from 'pdfjs-dist'
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl
+// Cache-bust the worker URL: an earlier production config served this file as
+// application/octet-stream with an immutable cache header. Keeping a version
+// here prevents browsers/CDNs from reusing that invalid cached response.
+pdfjsLib.GlobalWorkerOptions.workerSrc = `${workerUrl}?v=3`
 
 export async function extractPdfText(file: File): Promise<string> {
   const buf = await file.arrayBuffer()

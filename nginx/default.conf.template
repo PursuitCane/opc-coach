@@ -12,8 +12,8 @@ server {
   location ~* \.mjs$ {
     try_files $uri =404;
     default_type application/javascript;
-    expires 1y;
-    add_header Cache-Control "public, immutable";
+    expires -1;
+    add_header Cache-Control "no-store";
   }
 
   location ~* \.(?:js|css|png|jpg|jpeg|gif|svg|ico|woff2?)$ {
