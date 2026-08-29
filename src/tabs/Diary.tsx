@@ -109,7 +109,7 @@ export function Diary() {
                 onClick={() => setTab('chat')}
                 style={{ padding: '0 6px', color: 'var(--color-accent)' }}
               >
-                苏格拉底追问
+                对话
               </button>{' '}
               聊两句，然后回来点"总结这次对话"。
             </div>
