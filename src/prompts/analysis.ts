@@ -35,6 +35,23 @@ const SHAPE = `严格只输出下面这份 JSON，不要 markdown 代码块围�
   "deepDives": [
     {"no":"01","dim":"<对应维度>","title":"<深挖方向>","body":"<深挖价值与具体落点>","meta":"<建议产出物或验证方式>"}
   ],
+  "profile": {
+    "basics": [
+      {"label":"所属行业","value":"<从材料提炼的行业>","src":"材料提炼"},
+      {"label":"当前阶段","value":"<从材料判断的阶段>","src":"材料提炼"},
+      {"label":"注册资本","value":"<材料没有时写待补充>","src":"工商信息或待补充"},
+      {"label":"公司人数","value":"<从材料提炼的人数>","src":"材料提炼"},
+      {"label":"成立时间","value":"<材料没有时写待补充>","src":"工商信息或待补充"},
+      {"label":"所在城市","value":"<材料没有时写待补充>","src":"工商信息或待补充"}
+    ],
+    "business": [
+      {"label":"面向市场","value":"<目标市场与场景>"},
+      {"label":"潜在客户","value":"<核心客户与次级客户>"},
+      {"label":"产品模式","value":"<产品或服务及计价方式>"},
+      {"label":"商业规模","value":"<已知订单、客单或收入；缺失时写待验证>"},
+      {"label":"潜在合作伙伴","value":"<可帮助获客、交付或增长的合作方>"}
+    ]
+  },
   "planQuestions": [
     {"question":"<固定确认问题的标题>","hint":"<该问题的完整描述>"}
   ]
@@ -44,7 +61,8 @@ const SHAPE = `严格只输出下面这份 JSON，不要 markdown 代码块围�
 要求：
 - highlights 至少 3 条；issues 至少 4 条，并同时包含 missing 与 flaw；actions 至少 3 条；deepDives 恰好 2-3 条。
 - planQuestions 恰好 6 道，按系统提示词模块5的固定标题与描述顺序输出，question 放标题，hint 放完整描述。
-- dims 必须严格使用上述 5 个 key、label 与顺序。首次分析 delta 全部给 "+0"。`
+- dims 必须严格使用上述 5 个 key、label 与顺序。首次分析 delta 全部给 "+0"。
+- profile 是企业画像的辅助结构化字段，不新增分析模块；必须严格基于材料，无法确认的字段写“待补充”或“待验证”，不要猜测。`
 
 export interface EvaluationResult {
   analysis: Analysis

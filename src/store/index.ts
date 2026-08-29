@@ -32,6 +32,7 @@ interface State {
 
   // ---- project lifecycle ----
   setDraftName: (n: string) => void
+  setProjectName: (n: string) => void
   createProject: (name: string, files: FileItem[]) => string
   switchProject: (id: string) => void
   deleteProject: (id: string) => void
@@ -132,6 +133,8 @@ export const useAppStore = create<State>()(
         })),
 
       setDraftName: (n) => set({ draftName: n }),
+      setProjectName: (name) =>
+        set((st) => updateCurrent(st, (p) => ({ ...p, name }))),
       createProject: (name, files) => {
         const p = emptyProject(name || '未命名项目', files)
         set((st) => ({

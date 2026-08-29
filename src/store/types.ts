@@ -56,6 +56,17 @@ export interface Action {
   meta: string // "预计 14 天 · 每天 40 分钟"
 }
 
+export interface ProfileField {
+  label: string
+  value: string
+  src?: string
+}
+
+export interface ProjectProfile {
+  basics: ProfileField[]
+  business: ProfileField[]
+}
+
 export interface Analysis {
   score: number // 0-100
   scoreDelta: string // "+6"
@@ -65,6 +76,7 @@ export interface Analysis {
   issues: Issue[]
   actions: Action[]
   deepDives?: Action[]
+  profile?: ProjectProfile
   updatedAt: string // "8 月 25 日 21:40"
 }
 
