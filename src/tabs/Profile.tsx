@@ -74,7 +74,7 @@ export function Profile() {
   }
 
   return (
-    <div className="profile-page" style={{ animation: 'opcFade .3s both', display: 'grid', gridTemplateColumns: '1fr 320px', gap: 22, alignItems: 'start' }}>
+    <div className="profile-page" style={{ animation: 'opcFade .3s both', display: 'grid', gridTemplateColumns: '1fr 320px', gap: 22, alignItems: 'start', maxWidth: 1100, marginInline: 'auto' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 22, minWidth: 0 }}>
         <div>
           <h4 style={{ margin: '0 0 3px', fontSize: 19 }}>企业画像</h4>

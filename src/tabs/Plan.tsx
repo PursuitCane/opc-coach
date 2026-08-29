@@ -112,7 +112,7 @@ export function Plan() {
 
   // form
   return (
-    <div style={{ maxWidth: 880, animation: 'opcFade .3s both' }}>
+    <div style={{ maxWidth: 880, marginInline: 'auto', animation: 'opcFade .3s both' }}>
       <h4 style={{ margin: '0 0 6px', fontSize: 19, fontFamily: 'var(--font-heading)' }}>
         补齐六项前置信息，我来优化完整的商业计划
       </h4>
@@ -243,7 +243,7 @@ function PlanDone() {
   const { plan } = project
 
   return (
-    <div>
+    <div style={{ maxWidth: 1100, marginInline: 'auto' }}>
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, marginBottom: 18 }}>
         <div>
           <h4 style={{ margin: '0 0 3px', fontSize: 19, fontFamily: 'var(--font-heading)' }}>
