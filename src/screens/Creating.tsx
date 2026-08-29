@@ -10,7 +10,7 @@ const STEPS = [
   '正在生成五维评分…',
   '正在挑出该继续追问你的问题…',
 ]
-const ANALYSIS_TIMEOUT_MS = 90_000
+const ANALYSIS_TIMEOUT_MS = 5 * 60_000
 
 export function Creating() {
   const project = useCurrentProject()
@@ -62,7 +62,7 @@ export function Creating() {
         clearInterval(stepTimer)
         setError(
           controller.signal.aborted
-            ? '分析请求超过 90 秒没有返回，可能是网络或 AI 接口异常，请重试。'
+            ? '分析请求超过 5 分钟没有返回，可能是网络或 AI 接口异常，请重试。'
             : e instanceof Error
               ? e.message
               : String(e),
