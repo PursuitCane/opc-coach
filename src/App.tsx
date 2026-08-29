@@ -6,6 +6,7 @@ import { Empty } from './screens/Empty'
 import { Creating } from './screens/Creating'
 import { Workbench } from './screens/Workbench'
 import { MobileAccessDialog } from './components/MobileAccessDialog'
+import { HumanSupport } from './components/HumanSupport'
 import type { AuthUser } from './lib/auth'
 
 export default function App() {
@@ -72,6 +73,7 @@ export default function App() {
   return (
     <>
       {content}
+      <HumanSupport />
       <MobileAccessDialog />
     </>
   )
