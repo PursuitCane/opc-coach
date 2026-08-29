@@ -53,53 +53,55 @@ export function RadarChart({ dims, lastDims }: Props) {
 
   return (
     <svg viewBox="0 0 400 344" style={{ width: '100%', display: 'block', marginTop: 4 }}>
-      {/* 底层网格：4 圈 + 5 条辐线 */}
-      <g fill="none" stroke="#3f424d" strokeWidth={1}>
-        <polygon points={ringPoints(100)} />
-        <polygon points={ringPoints(75)} />
-        <polygon points={ringPoints(50)} />
-        <polygon points={ringPoints(25)} />
-        {Array.from({ length: 5 }, (_, i) => {
-          const [x, y] = point(100, i)
-          return <line key={i} x1={CX} y1={CY} x2={x} y2={y} />
-        })}
-      </g>
+      <g transform="translate(200 172) scale(.92) translate(-200 -172)">
+        {/* 底层网格：4 圈 + 5 条辐线 */}
+        <g fill="none" stroke="#3f424d" strokeWidth={1}>
+          <polygon points={ringPoints(100)} />
+          <polygon points={ringPoints(75)} />
+          <polygon points={ringPoints(50)} />
+          <polygon points={ringPoints(25)} />
+          {Array.from({ length: 5 }, (_, i) => {
+            const [x, y] = point(100, i)
+            return <line key={i} x1={CX} y1={CY} x2={x} y2={y} />
+          })}
+        </g>
 
-      {/* 上次（虚线） */}
-      {lastPoly && (
+        {/* 上次（虚线） */}
+        {lastPoly && (
+          <polygon
+            points={lastPoly}
+            fill="none"
+            stroke="#595d6c"
+            strokeWidth={1.2}
+            strokeDasharray="4 4"
+          />
+        )}
+
+        {/* 本次 */}
         <polygon
-          points={lastPoly}
-          fill="none"
-          stroke="#595d6c"
-          strokeWidth={1.2}
-          strokeDasharray="4 4"
+          points={currentPoly}
+          fill="rgba(145,132,217,.22)"
+          stroke="#9184d9"
+          strokeWidth={1.8}
         />
-      )}
+        <g fill="#9184d9">
+          {dims.slice(0, 5).map((d, i) => {
+            const [x, y] = point(d.value, i)
+            return <circle key={d.key} cx={x} cy={y} r={3} />
+          })}
+        </g>
 
-      {/* 本次 */}
-      <polygon
-        points={currentPoly}
-        fill="rgba(145,132,217,.22)"
-        stroke="#9184d9"
-        strokeWidth={1.8}
-      />
-      <g fill="#9184d9">
-        {dims.slice(0, 5).map((d, i) => {
-          const [x, y] = point(d.value, i)
-          return <circle key={d.key} cx={x} cy={y} r={3} />
-        })}
-      </g>
-
-      {/* 标签 */}
-      <g fontFamily="Inter, sans-serif" fontSize="12.5" fill="#cfd3e5">
-        {dims.slice(0, 5).map((d, i) => {
-          const lbl = LABELS[i]
-          return (
-            <text key={d.key} x={lbl.x} y={lbl.y} textAnchor={lbl.anchor}>
-              {d.label} {d.value}
-            </text>
-          )
-        })}
+        {/* 标签 */}
+        <g fontFamily="Inter, sans-serif" fontSize="12.5" fill="#cfd3e5">
+          {dims.slice(0, 5).map((d, i) => {
+            const lbl = LABELS[i]
+            return (
+              <text key={d.key} x={lbl.x} y={lbl.y} textAnchor={lbl.anchor}>
+                {d.label} {d.value}
+              </text>
+            )
+          })}
+        </g>
       </g>
     </svg>
   )

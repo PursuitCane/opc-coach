@@ -1,7 +1,7 @@
 // Global state types for OPC Coach
 
 export type Screen = 'login' | 'empty' | 'creating' | 'app'
-export type Tab = 'analysis' | 'plan' | 'profile' | 'chat' | 'diary' | 'market' | 'materials'
+export type Tab = 'analysis' | 'plan' | 'profile' | 'chat' | 'diary' | 'market'
 export type PlanStage = 'form' | 'gen' | 'done'
 
 export type FileExt = 'PDF' | 'MD'

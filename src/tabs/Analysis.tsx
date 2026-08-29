@@ -2,7 +2,11 @@ import { useState } from 'react'
 import { useAppStore, useCurrentProject } from '../store'
 import { RadarChart } from '../components/RadarChart'
 
-export function Analysis() {
+interface Props {
+  onOpenMaterials: () => void
+}
+
+export function Analysis({ onOpenMaterials }: Props) {
   const project = useCurrentProject()
   const setTab = useAppStore((s) => s.setTab)
   const setPendingChatSeed = useAppStore((s) => s.setPendingChatSeed)
@@ -40,7 +44,7 @@ export function Analysis() {
           </div>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button className="btn btn-secondary" onClick={() => setTab('materials')}>
+          <button className="btn btn-secondary" onClick={onOpenMaterials}>
             补充材料
           </button>
           <button className="btn btn-primary" onClick={() => setPosterOpen(true)}>生成 BPTI 海报</button>

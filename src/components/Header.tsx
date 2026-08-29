@@ -4,6 +4,7 @@ import { UserMenu } from './UserMenu'
 
 interface Props {
   onLogout: () => Promise<void> | void
+  onOpenMaterials?: () => void
 }
 
 const TAB_LABELS: { key: Tab; label: string; badge?: (s: ReturnType<typeof getBadgeData>) => string }[] = [
@@ -22,7 +23,7 @@ function getBadgeData(project: Project | null) {
   }
 }
 
-export function Header({ onLogout }: Props) {
+export function Header({ onLogout, onOpenMaterials }: Props) {
   const project = useCurrentProject()
   const tab = useAppStore((s) => s.tab)
   const setTab = useAppStore((s) => s.setTab)
@@ -117,6 +118,15 @@ export function Header({ onLogout }: Props) {
                 <span style={{ fontSize: 11, color: '#595d6c' }}>
                   项目内容不可编辑，通过补充材料更新
                 </span>
+                {onOpenMaterials && (
+                  <button
+                    className="btn btn-ghost"
+                    style={{ fontSize: 11.5 }}
+                    onClick={onOpenMaterials}
+                  >
+                    材料管理
+                  </button>
+                )}
               </>
             )}
           </div>
@@ -146,7 +156,6 @@ export function Header({ onLogout }: Props) {
       >
         {TAB_LABELS.map((t) => {
           const active = tab === t.key
-          const isMuted = t.key === 'materials'
           return (
             <button
               key={t.key}
@@ -162,12 +171,10 @@ export function Header({ onLogout }: Props) {
                 whiteSpace: 'nowrap',
                 fontFamily: 'var(--font-heading)',
                 fontWeight: 500,
-                fontSize: isMuted ? 13 : 13.5,
+                fontSize: 13.5,
                 color: active
                   ? 'var(--color-accent)'
-                  : isMuted
-                    ? '#75798c'
-                    : '#b2b6ca',
+                  : '#b2b6ca',
                 boxShadow: `inset 0 -2px 0 ${active ? 'var(--color-accent)' : 'transparent'}`,
               }}
             >
