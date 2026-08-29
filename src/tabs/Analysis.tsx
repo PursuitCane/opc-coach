@@ -288,9 +288,16 @@ function Poster({ projectName, score, dims, onClose }: { projectName: string; sc
 }
 
 function EmptyAnalysis() {
+  const setScreen = useAppStore((s) => s.setScreen)
+
   return (
     <div style={{ padding: 40, color: '#75798c', textAlign: 'center' }}>
-      分析结果还没生成，稍等一下或去材料管理页重新分析。
+      <div style={{ marginBottom: 16 }}>
+        分析结果还没生成，稍等一下或重新上传材料。
+      </div>
+      <button className="btn btn-secondary" onClick={() => setScreen('empty')}>
+        返回上传页
+      </button>
     </div>
   )
 }
