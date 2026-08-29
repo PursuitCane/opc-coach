@@ -11,11 +11,11 @@ const CY = 190
 const R = 130 // 100 分对应半径
 // 五维标签相对雷达的锚点（沿用稿子里的坐标）
 const LABELS = [
-  { x: 200, y: 44, anchor: 'middle' as const },
-  { x: 334, y: 146, anchor: 'start' as const },
-  { x: 286, y: 318, anchor: 'start' as const },
-  { x: 114, y: 318, anchor: 'end' as const },
-  { x: 66, y: 146, anchor: 'end' as const },
+  { x: 208, y: 50, anchor: 'middle' as const },
+  { x: 312, y: 132, anchor: 'start' as const },
+  { x: 290, y: 298, anchor: 'start' as const },
+  { x: 128, y: 298, anchor: 'end' as const },
+  { x: 88, y: 132, anchor: 'end' as const },
 ]
 
 // 五个方向的单位向量（顶部开始，顺时针）
@@ -52,8 +52,8 @@ export function RadarChart({ dims, lastDims }: Props) {
   const lastPoly = lastDims && lastDims.length === 5 ? polyPoints(lastDims) : null
 
   return (
-    <svg viewBox="0 0 400 344" style={{ width: '100%', display: 'block', marginTop: 4 }}>
-      <g transform="translate(200 172) scale(.92) translate(-200 -172)">
+    <svg viewBox="0 0 400 344" style={{ width: '94%', display: 'block', margin: '4px auto 0' }}>
+      <g transform="translate(8 10) translate(200 190) scale(.874) translate(-200 -190)">
         {/* 底层网格：4 圈 + 5 条辐线 */}
         <g fill="none" stroke="#3f424d" strokeWidth={1}>
           <polygon points={ringPoints(100)} />
@@ -91,17 +91,23 @@ export function RadarChart({ dims, lastDims }: Props) {
           })}
         </g>
 
-        {/* 标签 */}
-        <g fontFamily="Inter, sans-serif" fontSize="12.5" fill="#cfd3e5">
-          {dims.slice(0, 5).map((d, i) => {
-            const lbl = LABELS[i]
-            return (
-              <text key={d.key} x={lbl.x} y={lbl.y} textAnchor={lbl.anchor}>
-                {d.label} {d.value}
-              </text>
-            )
-          })}
-        </g>
+      </g>
+
+      {/* 标签单独定位，避免调整文字时带动雷达图 */}
+      <g fontFamily="Inter, sans-serif" fontSize="11.5" fill="#cfd3e5">
+        {dims.slice(0, 5).map((d, i) => {
+          const lbl = LABELS[i]
+          return (
+            <text key={d.key} x={lbl.x} y={lbl.y} textAnchor={lbl.anchor}>
+              <tspan x={lbl.x} dy="0">
+                {d.label}
+              </tspan>
+              <tspan x={lbl.x} dy="16" fill="#9184d9">
+                {d.value}
+              </tspan>
+            </text>
+          )
+        })}
       </g>
     </svg>
   )

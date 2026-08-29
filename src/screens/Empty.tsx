@@ -82,7 +82,10 @@ export function Empty({ onLogout }: Props) {
             材料越全，我看得越准；之后随时可以补。
           </p>
 
-          <FileDropzone onStaged={(fs) => setStaged((prev) => [...prev, ...fs])} />
+          <FileDropzone
+            onStaged={(fs) => setStaged(fs.slice(0, 1))}
+            disabled={staged.length > 0}
+          />
 
           {staged.length > 0 && (
             <div
@@ -94,9 +97,9 @@ export function Empty({ onLogout }: Props) {
                 textAlign: 'left',
               }}
             >
-              {staged.map((f, i) => (
+              {staged.map((f) => (
                 <div
-                  key={i}
+                  key={f.name}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -120,6 +123,15 @@ export function Empty({ onLogout }: Props) {
                   <span style={{ fontSize: 13, flex: 1, minWidth: 0 }}>{f.name}</span>
                   <span style={{ fontSize: 11, color: '#75798c' }}>{f.size}</span>
                   <span className="tag tag-neutral">已就绪</span>
+                  <button
+                    className="btn btn-ghost"
+                    type="button"
+                    aria-label={`删除 ${f.name}`}
+                    onClick={() => setStaged([])}
+                    style={{ padding: '3px 6px', fontSize: 12 }}
+                  >
+                    删除
+                  </button>
                 </div>
               ))}
 

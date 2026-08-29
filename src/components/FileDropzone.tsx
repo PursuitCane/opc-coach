@@ -7,6 +7,7 @@ import type { StagedFile } from '../store/types'
 interface Props {
   onStaged: (files: StagedFile[]) => void
   compact?: boolean
+  disabled?: boolean
 }
 
 const MAX_SIZE = 10 * 1024 * 1024
@@ -17,15 +18,19 @@ function humanSize(bytes: number): string {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
 
-export function FileDropzone({ onStaged, compact }: Props) {
+export function FileDropzone({ onStaged, compact, disabled = false }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [dragOver, setDragOver] = useState(false)
 
   const handleFiles = async (list: FileList | null) => {
-    if (!list || list.length === 0) return
+    if (!list || list.length === 0 || busy || disabled) return
     setError('')
+    if (list.length > 1) {
+      setError('一次只能上传 1 份材料，请重新选择。')
+      return
+    }
     setBusy(true)
     try {
       const out: StagedFile[] = []
@@ -76,7 +81,8 @@ export function FileDropzone({ onStaged, compact }: Props) {
           borderRadius: 14,
           padding: compact ? '24px 20px' : '42px 32px',
           background: dragOver ? 'rgba(145,132,217,.06)' : 'rgba(35,37,50,.42)',
-          cursor: busy ? 'progress' : 'pointer',
+          cursor: busy ? 'progress' : disabled ? 'not-allowed' : 'pointer',
+          opacity: disabled ? 0.58 : 1,
           transition: 'border-color 0.15s, background 0.15s',
         }}
       >
@@ -102,10 +108,12 @@ export function FileDropzone({ onStaged, compact }: Props) {
           </svg>
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontFamily: 'var(--font-heading)', fontSize: 16 }}>
-              {busy ? '解析中…' : '把文件拖到这里，或点击选择'}
+              {busy ? '解析中…' : disabled ? '已上传 1 份材料' : '把文件拖到这里，或点击选择'}
             </div>
             <div style={{ fontSize: 12, color: '#75798c', marginTop: 5 }}>
-              只支持 PDF / Markdown，单个不超过 10MB
+              {disabled
+                ? 'demo阶段暂时只支持分析 1 份材料，如需更换材料，请先删除当前材料'
+                : '只支持 PDF / Markdown，单个不超过 10MB'}
             </div>
           </div>
         </div>
@@ -113,9 +121,12 @@ export function FileDropzone({ onStaged, compact }: Props) {
           ref={inputRef}
           type="file"
           accept=".pdf,.md,.markdown,application/pdf,text/markdown"
-          multiple
-          disabled={busy}
+          disabled={busy || disabled}
           style={{ display: 'none' }}
+          onClick={(e) => {
+            // 允许删除后再次选择同一个文件时仍然触发 change。
+            e.currentTarget.value = ''
+          }}
           onChange={(e) => handleFiles(e.target.files)}
         />
       </div>

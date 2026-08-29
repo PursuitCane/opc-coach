@@ -117,6 +117,9 @@ export function Creating() {
             >
               正在读你的材料
             </div>
+            <div style={{ fontSize: 11.5, color: '#9397ab', marginBottom: 5 }}>
+              请不要关闭页面，稍等几分钟
+            </div>
             <div style={{ fontSize: 12.5, color: '#75798c', marginBottom: 18 }}>
               {STEPS[step]}
             </div>
