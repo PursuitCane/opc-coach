@@ -4,7 +4,6 @@ import { UserMenu } from './UserMenu'
 
 interface Props {
   onLogout: () => Promise<void> | void
-  onOpenMaterials?: () => void
 }
 
 const TAB_LABELS: { key: Tab; label: string; badge?: (s: ReturnType<typeof getBadgeData>) => string }[] = [
@@ -23,7 +22,7 @@ function getBadgeData(project: Project | null) {
   }
 }
 
-export function Header({ onLogout, onOpenMaterials }: Props) {
+export function Header({ onLogout }: Props) {
   const project = useCurrentProject()
   const tab = useAppStore((s) => s.tab)
   const setTab = useAppStore((s) => s.setTab)
@@ -115,18 +114,6 @@ export function Header({ onLogout, onOpenMaterials }: Props) {
                 >
                   改名
                 </button>
-                <span style={{ fontSize: 11, color: '#595d6c' }}>
-                  项目内容不可编辑，通过补充材料更新
-                </span>
-                {onOpenMaterials && (
-                  <button
-                    className="btn btn-ghost"
-                    style={{ fontSize: 11.5 }}
-                    onClick={onOpenMaterials}
-                  >
-                    材料管理
-                  </button>
-                )}
               </>
             )}
           </div>

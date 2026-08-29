@@ -37,9 +37,6 @@ export function Materials({ open, onClose }: Props) {
         <div className="materials-dialog-header">
           <div>
             <h4 id="materials-dialog-title">材料管理</h4>
-            <div className="materials-dialog-subtitle">
-              {project.files.length} 份材料 · 项目创建时上传
-            </div>
           </div>
           <button className="materials-dialog-close" onClick={onClose} aria-label="关闭材料管理">
             ×

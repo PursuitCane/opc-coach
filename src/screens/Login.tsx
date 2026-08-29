@@ -10,7 +10,7 @@ interface Props {
 
 export function Login({ onAuthenticated }: Props) {
   return <div className="landing">
-    <header className="landing-header"><Brand /><span className="landing-subtitle">一人公司 · 创业陪伴教练</span><a className="btn btn-primary" href="#signin">立即体验</a></header>
+    <header className="landing-header"><Brand /><span className="landing-subtitle">一人公司 · 创业陪伴教练</span></header>
     <section className="landing-hero"><div><h1>OPC<br />COACH</h1><div className="landing-rule" /><p className="landing-lead">你做项目时是否遇到这些问题：</p><div className="landing-pains">{PAINS.map(([title, body]) => <div className="landing-pain" key={title}><i /><div><strong>{title}</strong><span>{body}</span></div></div>)}</div><div className="landing-divider" /><div className="landing-help"><h2>我们帮你梳理！</h2><p>陪你把想法变成<br />可验证、可增长、可落地的项目</p></div></div>
       <Auth onAuthenticated={onAuthenticated} />
     </section>

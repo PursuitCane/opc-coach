@@ -21,7 +21,7 @@ export function Workbench({ onLogout, user }: Props) {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <Header onLogout={onLogout} onOpenMaterials={() => setMaterialsOpen(true)} />
+      <Header onLogout={onLogout} />
       <main style={{ flex: 1, padding: '24px 34px 56px' }}>
         {tab === 'analysis' && <Analysis onOpenMaterials={() => setMaterialsOpen(true)} user={user} />}
         {tab === 'plan' && <Plan />}

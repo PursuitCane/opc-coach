@@ -321,51 +321,12 @@ export function Analysis({ onOpenMaterials, user }: Props) {
 
 function Poster({ imageNo, onClose }: { imageNo: number; onClose: () => void }) {
   const safeImageNo = Number.isInteger(imageNo) && imageNo >= 1 && imageNo <= 16 ? imageNo : 6
-  const [downloading, setDownloading] = useState(false)
 
-  const downloadPoster = async () => {
-    setDownloading(true)
-    try {
-      const loadImage = (src: string) => new Promise<HTMLImageElement>((resolve, reject) => {
-        const image = new Image()
-        image.onload = () => resolve(image)
-        image.onerror = () => reject(new Error(`图片加载失败：${src}`))
-        image.src = src
-      })
-
-      const [posterImage, qrImage] = await Promise.all([
-        loadImage(`/share/${safeImageNo}.png`),
-        loadImage('/opc-coach-qr.png'),
-      ])
-      const canvas = document.createElement('canvas')
-      canvas.width = posterImage.naturalWidth
-      canvas.height = posterImage.naturalHeight
-      const context = canvas.getContext('2d')
-      if (!context) throw new Error('无法创建海报画布')
-
-      context.drawImage(posterImage, 0, 0)
-      const qrWidth = canvas.width * 0.2
-      const qrHeight = qrWidth * (qrImage.naturalHeight / qrImage.naturalWidth)
-      const qrX = canvas.width * 0.1
-      const qrY = canvas.height * (1 - 0.19) - qrHeight
-      context.drawImage(qrImage, qrX, qrY, qrWidth, qrHeight)
-
-      context.fillStyle = '#2f2a2a'
-      context.font = '500 30px "PingFang SC", "Microsoft YaHei", sans-serif'
-      context.fillText('测测你的BP“人格”：', canvas.width * 0.1, canvas.height * 0.845)
-      context.fillText('进群获取链接即可开测', canvas.width * 0.1, canvas.height * 0.87)
-
-      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'))
-      if (!blob) throw new Error('海报生成失败')
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `bpti-poster-${safeImageNo}.png`
-      link.click()
-      URL.revokeObjectURL(url)
-    } finally {
-      setDownloading(false)
-    }
+  const downloadPoster = () => {
+    const link = document.createElement('a')
+    link.href = `/share_download/${safeImageNo}.png`
+    link.download = `bpti-poster-${safeImageNo}.png`
+    link.click()
   }
 
   return createPortal(
@@ -373,16 +334,9 @@ function Poster({ imageNo, onClose }: { imageNo: number; onClose: () => void }) 
       <div className="poster-dialog" role="dialog" aria-modal="true" aria-label="BPTI 海报" onClick={(e) => e.stopPropagation()}>
         <div className="bpti-poster">
           <button className="poster-close" aria-label="关闭海报" onClick={onClose}>×</button>
-          <img className="bpti-poster-image" src={`/share/${safeImageNo}.png`} alt={`BPTI 海报 ${safeImageNo}`} />
-          <img className="bpti-poster-qr" src="/opc-coach-qr.png" alt="OPC Coach 二维码" />
-          <div className="bpti-poster-copy" aria-hidden="true">
-            <div>测测你的BP“人格”：</div>
-            <div>进群获取链接即可开测</div>
-          </div>
+          <img className="bpti-poster-image" src={`/share_download/${safeImageNo}.png`} alt={`BPTI 海报 ${safeImageNo}`} />
         </div>
-        <button className="btn btn-primary poster-share" onClick={downloadPoster} disabled={downloading}>
-          {downloading ? '生成中…' : '分享海报'}
-        </button>
+        <button className="btn btn-primary poster-share" onClick={downloadPoster}>分享海报</button>
       </div>
     </div>,
     document.body,
