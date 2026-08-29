@@ -83,6 +83,7 @@ export async function callAIStream(opts: {
   system?: string
   messages: AIMessage[]
   onDelta: (chunk: string) => void
+  knowledgeScopes?: Array<'finance'>
 }): Promise<string> {
   const messages: AIMessage[] = opts.system
     ? [{ role: 'system', content: opts.system }, ...opts.messages]
@@ -94,7 +95,11 @@ export async function callAIStream(opts: {
       'Content-Type': 'application/json',
     },
     credentials: 'include',
-    body: JSON.stringify({ messages, stream: true }),
+    body: JSON.stringify({
+      messages,
+      stream: true,
+      ...(opts.knowledgeScopes?.length ? { knowledgeScopes: opts.knowledgeScopes } : {}),
+    }),
   })
   if (!res.ok || !res.body) {
     const text = await res.text().catch(() => '')

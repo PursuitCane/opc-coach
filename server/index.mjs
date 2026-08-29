@@ -7,6 +7,7 @@ import jwt from 'jsonwebtoken'
 import mysql from 'mysql2/promise'
 import multer from 'multer'
 import { Resend } from 'resend'
+import { retrieveFinancialContext } from './financial-knowledge.mjs'
 
 const required = ['MYSQL_URL', 'AUTH_SESSION_SECRET', 'AUTH_CODE_SECRET', 'RESEND_API_KEY', 'EMAIL_FROM', 'OPENAI_API_KEY']
 const missing = required.filter((name) => !process.env[name])
@@ -143,6 +144,7 @@ app.post('/api/ai', async (req, res, next) => {
   const system = body.system
   const stream = body.stream === true
   const jsonMode = body.response_format?.type === 'json_object'
+  const knowledgeScopes = Array.isArray(body.knowledgeScopes) ? body.knowledgeScopes : []
 
   if (!messages || messages.length === 0 || messages.length > 100 || !messages.every(isAiMessage)) {
     return res.status(400).json({ error: 'AI 消息格式无效。' })
@@ -151,9 +153,23 @@ app.post('/api/ai', async (req, res, next) => {
     return res.status(400).json({ error: 'AI 系统提示格式无效。' })
   }
 
-  const upstreamMessages = system === undefined
+  let upstreamMessages = system === undefined
     ? messages
     : [{ role: 'system', content: system }, ...messages]
+
+  if (knowledgeScopes.includes('finance')) {
+    const financialContext = retrieveFinancialContext(upstreamMessages)
+    if (financialContext) {
+      const systemIndex = upstreamMessages.findIndex((message) => message.role === 'system')
+      if (systemIndex >= 0) {
+        upstreamMessages = upstreamMessages.map((message, index) => index === systemIndex
+          ? { ...message, content: `${message.content}\n\n${financialContext}` }
+          : message)
+      } else {
+        upstreamMessages = [{ role: 'system', content: financialContext }, ...upstreamMessages]
+      }
+    }
+  }
 
   try {
     const upstream = await fetch(`${config.ai.baseUrl}/chat/completions`, {

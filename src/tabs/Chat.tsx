@@ -113,7 +113,7 @@ export function Chat() {
               苏格拉底式追问
             </div>
             <div style={{ fontSize: 11.5, color: '#75798c' }}>
-              我不给答案，只把问题推到你能回答的地方
+              经营问题陪你拆解，金融问题结合产品库匹配
             </div>
           </div>
           <span className="tag tag-outline" style={{ marginLeft: 'auto' }}>
