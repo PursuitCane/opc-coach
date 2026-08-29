@@ -25,7 +25,7 @@ export function Workbench({ onLogout, user }: Props) {
       <main style={{ flex: 1, padding: '24px 34px 56px' }}>
         {tab === 'analysis' && <Analysis onOpenMaterials={() => setMaterialsOpen(true)} user={user} />}
         {tab === 'plan' && <Plan />}
-        {tab === 'profile' && <Profile onOpenMaterials={() => setMaterialsOpen(true)} />}
+        {tab === 'profile' && <Profile />}
         {tab === 'chat' && <Chat />}
         {tab === 'diary' && <Diary />}
         {tab === 'market' && <Market />}

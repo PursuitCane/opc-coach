@@ -8,11 +8,7 @@ const OPPORTUNITIES = [
   ['场景对接', '商圈快闪场景合作', '提供短期档位，适合验证线下转化与真实客单价。', '匹配度 88%'],
 ]
 
-interface Props {
-  onOpenMaterials: () => void
-}
-
-export function Profile({ onOpenMaterials }: Props) {
+export function Profile() {
   const project = useCurrentProject()
   const [applied, setApplied] = useState<string[]>([])
   if (!project) return null
@@ -21,7 +17,7 @@ export function Profile({ onOpenMaterials }: Props) {
     <div style={{ marginBottom: 20 }}><h4 style={{ margin: '0 0 3px', fontSize: 19, fontFamily: 'var(--font-heading)' }}>企业画像</h4><div style={{ fontSize: 12, color: '#75798c' }}>基于项目材料提炼，用于匹配政策、融资与合作机会</div></div>
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
       <section className="profile-card"><div className="profile-kicker">基础信息</div>{BASICS.map(([label, value]) => <div className="profile-row" key={label}><span>{label}</span><b>{value}</b><small>材料提炼</small></div>)}</section>
-      <section className="profile-card"><div className="profile-kicker">经营画像</div><div className="profile-summary"><b>{project.name}</b><p>{project.analysis?.narrative ?? '上传材料并完成商业分析后，这里会形成项目的经营画像。'}</p></div><div className="profile-row"><span>当前优先缺口</span><b>{weakest ? `${weakest.label} · ${weakest.value} 分` : '等待分析'}</b></div><button className="btn btn-secondary" onClick={onOpenMaterials}>查看项目材料</button></section>
+      <section className="profile-card"><div className="profile-kicker">经营画像</div><div className="profile-summary"><b>{project.name}</b><p>{project.analysis?.narrative ?? '上传材料并完成商业分析后，这里会形成项目的经营画像。'}</p></div><div className="profile-row"><span>当前优先缺口</span><b>{weakest ? `${weakest.label} · ${weakest.value} 分` : '等待分析'}</b></div></section>
     </div>
     <div className="profile-kicker" style={{ marginBottom: 12 }}>为你匹配的机会</div>
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>{OPPORTUNITIES.map(([kind, title, body, match]) => { const done = applied.includes(title); return <section className="profile-card" key={title}><span className="tag tag-accent">{match}</span><h5>{title}</h5><p>{body}</p><small>{kind} · 申请反馈将同步到成长记录</small><button className={done ? 'btn btn-secondary' : 'btn btn-primary'} onClick={() => setApplied((x) => done ? x : [...x, title])}>{done ? '已提交申请' : '申请对接'}</button></section> })}</div>
