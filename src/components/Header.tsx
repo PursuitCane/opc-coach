@@ -24,7 +24,7 @@ function getBadgeData(project: Project | null) {
   }
 }
 
-export function Header({ onLogout }: Props) {
+export function Header({ onLogout, user }: Props) {
   const project = useCurrentProject()
   const tab = useAppStore((s) => s.tab)
   const setTab = useAppStore((s) => s.setTab)

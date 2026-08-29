@@ -3,6 +3,7 @@ import { useAppStore } from '../store'
 import { FileDropzone } from '../components/FileDropzone'
 import { UserMenu } from '../components/UserMenu'
 import { archiveProject } from '../lib/archive'
+import type { AuthUser } from '../lib/auth'
 import type { FileItem, StagedFile } from '../store/types'
 
 function todayLabel(): string {
@@ -12,9 +13,10 @@ function todayLabel(): string {
 
 interface Props {
   onLogout: () => Promise<void> | void
+  user: AuthUser
 }
 
-export function Empty({ onLogout }: Props) {
+export function Empty({ onLogout, user }: Props) {
   const createProject = useAppStore((s) => s.createProject)
   const draftName = useAppStore((s) => s.draftName)
   const setDraftName = useAppStore((s) => s.setDraftName)
@@ -42,7 +44,7 @@ export function Empty({ onLogout }: Props) {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <Header onLogout={onLogout} />
+      <Header onLogout={onLogout} user={user} />
       <main
         style={{
           flex: 1,
@@ -173,7 +175,7 @@ export function Empty({ onLogout }: Props) {
   )
 }
 
-function Header({ onLogout }: Props) {
+function Header({ onLogout, user }: Props) {
   return (
     <header
       style={{
@@ -214,7 +216,7 @@ function Header({ onLogout }: Props) {
           >
             ＋ 新建项目（即将开放）
           </button>
-          <UserMenu onLogout={onLogout} />
+          <UserMenu onLogout={onLogout} email={user.email} />
         </div>
       </div>
     </header>

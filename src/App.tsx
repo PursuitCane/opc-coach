@@ -57,7 +57,7 @@ export default function App() {
           content = null
           break
         case 'empty':
-          content = <Empty onLogout={handleLogout} />
+          content = authUser ? <Empty onLogout={handleLogout} user={authUser} /> : null
           break
         case 'creating':
           content = <Creating />
