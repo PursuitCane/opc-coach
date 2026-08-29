@@ -43,6 +43,7 @@ export interface Highlight {
 
 export interface Issue {
   level: '高' | '中' | '低'
+  kind?: 'missing' | 'flaw'
   title: string
   body: string
 }
@@ -63,6 +64,7 @@ export interface Analysis {
   highlights: Highlight[]
   issues: Issue[]
   actions: Action[]
+  deepDives?: Action[]
   updatedAt: string // "8 月 25 日 21:40"
 }
 

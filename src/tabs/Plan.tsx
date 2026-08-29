@@ -114,7 +114,7 @@ export function Plan() {
   return (
     <div style={{ maxWidth: 880, animation: 'opcFade .3s both' }}>
       <h4 style={{ margin: '0 0 6px', fontSize: 19, fontFamily: 'var(--font-heading)' }}>
-        补齐四个缺口，我来写完整的商业计划
+        补齐六项前置信息，我来优化完整的商业计划
       </h4>
       <p style={{ fontSize: 13.5, color: '#9397ab', margin: '0 0 8px', lineHeight: 1.7 }}>
         这些是材料里读不到、又绕不过去的信息。写得越具体，计划越能拿去用。

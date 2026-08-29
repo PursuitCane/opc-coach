@@ -176,7 +176,7 @@ export function Analysis() {
                   marginBottom: 11,
                 }}
               >
-                需要面对的问题
+                核心问题清单
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {a.issues.map((p, i) => (
@@ -185,7 +185,7 @@ export function Analysis() {
                       className="tag tag-neutral"
                       style={{ flex: 'none', marginTop: 2 }}
                     >
-                      {p.level}
+                      {p.kind === 'missing' ? '缺失' : p.kind === 'flaw' ? '缺陷' : p.level}
                     </span>
                     <div>
                       <div style={{ fontSize: 13.5, fontWeight: 500 }}>{p.title}</div>
@@ -210,7 +210,7 @@ export function Analysis() {
             }}
           >
             <h5 style={{ margin: 0, fontSize: 15, fontFamily: 'var(--font-heading)' }}>
-              接下来两周，建议这么走
+              初步优化补充建议
             </h5>
             <span style={{ fontSize: 11.5, color: '#75798c' }}>按影响面排序</span>
           </div>
@@ -277,6 +277,33 @@ export function Analysis() {
             ))}
           </div>
         </div>
+
+        {(a.deepDives?.length ?? 0) > 0 && (
+          <div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 12 }}>
+              <h5 style={{ margin: 0, fontSize: 15, fontFamily: 'var(--font-heading)' }}>
+                深度深挖方向
+              </h5>
+              <span style={{ fontSize: 11.5, color: '#75798c' }}>最值得强化的核心方向</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
+              {a.deepDives?.map((item) => (
+                <div key={item.no} style={{ padding: '16px 18px', borderRadius: 12, background: 'rgba(145,132,217,.08)', boxShadow: 'inset 0 0 0 1px rgba(145,132,217,.24)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontFamily: 'var(--font-heading)', fontSize: 22, color: 'var(--color-accent)' }}>{item.no}</span>
+                    <span className="tag tag-accent">{item.dim}</span>
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 500 }}>{item.title}</div>
+                  <div style={{ fontSize: 12.5, color: '#9397ab', lineHeight: 1.7, flex: 1 }}>{item.body}</div>
+                  <div style={{ fontSize: 11, color: '#75798c' }}>{item.meta}</div>
+                  <button className="btn btn-secondary" style={{ fontSize: 12, alignSelf: 'flex-start' }} onClick={() => askFrom(item.title)}>
+                    带这条去追问
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
       {posterOpen && <Poster projectName={project.name} score={a.score} dims={a.dims.map((d) => [d.label, d.value])} onClose={() => setPosterOpen(false)} />}
     </div>
