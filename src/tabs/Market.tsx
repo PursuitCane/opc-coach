@@ -126,7 +126,7 @@ export function Market() {
   }
 
   return (
-    <div className="market-page" style={{ animation: 'opcFade .3s both', maxWidth: 1100 }}>
+    <div className="market-page" style={{ animation: 'opcFade .3s both', maxWidth: 1100, marginInline: 'auto' }}>
       <h4 style={{ margin: '0 0 3px', fontSize: 19 }}>服务市场</h4>
       <div style={{ fontSize: 12, color: '#75798c', marginBottom: 16 }}>
         与你当前阶段相关的服务排在前面
@@ -160,7 +160,7 @@ export function Market() {
           )
         })}
       </div>
-      <div className="market-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 16 }}>
+      <div className="market-grid">
         {visibleServices.map((service) => (
           <div
             key={`${service.kind}-${service.title}`}

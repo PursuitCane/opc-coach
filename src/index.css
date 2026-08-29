@@ -301,6 +301,7 @@ textarea.input {
 .analysis-empty-mark { width: 38px; height: 38px; margin-bottom: 20px; border: 1px solid #4a4e60; border-radius: 50%; display: grid; place-items: center; color: #9397ab; font-size: 18px; }
 .market-toast { position: fixed; left: 50%; bottom: 34px; transform: translateX(-50%); z-index: 60; padding: 11px 18px; border-radius: 10px; background: #2b2d3b; box-shadow: var(--shadow-md); font-size: 13px; color: #e9e9ed; animation: opcFade .25s both; white-space: nowrap; }
 .user-menu-toast { position: fixed; left: 50%; bottom: 34px; transform: translateX(-50%); z-index: 60; padding: 11px 18px; border-radius: 10px; background: #2b2d3b; box-shadow: var(--shadow-md); font-size: 13px; color: #e9e9ed; animation: opcFade .25s both; white-space: nowrap; }
+.market-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 500px)); justify-content: center; gap: 16px; }
 
 @media (max-width: 760px) {
   .profile-page { grid-template-columns: 1fr !important; }
@@ -309,6 +310,10 @@ textarea.input {
   .market-grid { grid-template-columns: 1fr !important; }
   .market-toast { max-width: calc(100vw - 40px); overflow: hidden; text-overflow: ellipsis; }
   .user-menu-toast { max-width: calc(100vw - 40px); overflow: hidden; text-overflow: ellipsis; }
+}
+
+@media (min-width: 761px) and (max-width: 1064px) {
+  .market-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @keyframes opcFade {
