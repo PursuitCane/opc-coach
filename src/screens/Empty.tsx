@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAppStore } from '../store'
 import { FileDropzone } from '../components/FileDropzone'
+import { UserMenu } from '../components/UserMenu'
 import { archiveProject } from '../lib/archive'
 import type { FileItem, StagedFile } from '../store/types'
 
@@ -9,7 +10,11 @@ function todayLabel(): string {
   return `${d.getMonth() + 1} 月 ${d.getDate()} 日`
 }
 
-export function Empty() {
+interface Props {
+  onLogout: () => Promise<void> | void
+}
+
+export function Empty({ onLogout }: Props) {
   const createProject = useAppStore((s) => s.createProject)
   const draftName = useAppStore((s) => s.draftName)
   const setDraftName = useAppStore((s) => s.setDraftName)
@@ -37,7 +42,7 @@ export function Empty() {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <Header />
+      <Header onLogout={onLogout} />
       <main
         style={{
           flex: 1,
@@ -156,7 +161,7 @@ export function Empty() {
   )
 }
 
-function Header() {
+function Header({ onLogout }: Props) {
   return (
     <header
       style={{
@@ -197,6 +202,7 @@ function Header() {
           >
             ＋ 新建项目（即将开放）
           </button>
+          <UserMenu onLogout={onLogout} />
         </div>
       </div>
     </header>

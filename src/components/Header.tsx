@@ -1,5 +1,10 @@
 import { useAppStore, useCurrentProject } from '../store'
 import type { Project, Tab } from '../store/types'
+import { UserMenu } from './UserMenu'
+
+interface Props {
+  onLogout: () => Promise<void> | void
+}
 
 const TAB_LABELS: { key: Tab; label: string; badge?: (s: ReturnType<typeof getBadgeData>) => string }[] = [
   { key: 'analysis', label: '商业分析' },
@@ -17,7 +22,7 @@ function getBadgeData(project: Project | null) {
   }
 }
 
-export function Header() {
+export function Header({ onLogout }: Props) {
   const project = useCurrentProject()
   const tab = useAppStore((s) => s.tab)
   const setTab = useAppStore((s) => s.setTab)
@@ -126,31 +131,7 @@ export function Header() {
           >
             ＋ 新建项目（即将开放）
           </button>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 7,
-              fontSize: 12.5,
-              color: '#9397ab',
-            }}
-          >
-            <div
-              style={{
-                width: 24,
-                height: 24,
-                borderRadius: '50%',
-                background: '#3f424d',
-                display: 'grid',
-                placeItems: 'center',
-                fontSize: 10,
-                color: '#cfd3e5',
-              }}
-            >
-              我
-            </div>
-            我
-          </div>
+          <UserMenu onLogout={onLogout} />
         </div>
       </div>
 

@@ -8,12 +8,16 @@ import { Market } from '../tabs/Market'
 import { Materials } from '../tabs/Materials'
 import { Profile } from '../tabs/Profile'
 
-export function Workbench() {
+interface Props {
+  onLogout: () => Promise<void> | void
+}
+
+export function Workbench({ onLogout }: Props) {
   const tab = useAppStore((s) => s.tab)
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <Header />
+      <Header onLogout={onLogout} />
       <main style={{ flex: 1, padding: '24px 34px 56px' }}>
         {tab === 'analysis' && <Analysis />}
         {tab === 'plan' && <Plan />}
