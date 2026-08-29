@@ -138,35 +138,10 @@ export function Plan() {
 
       {project.planQuestions && (
         <>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 22 }}>
-            <div
-              style={{
-                flex: 1,
-                maxWidth: 220,
-                height: 4,
-                borderRadius: 4,
-                background: '#2b2741',
-                overflow: 'hidden',
-              }}
-            >
-              <div
-                style={{
-                  width: `${
-                    (project.planAnswers.filter((x) => x?.trim()).length /
-                      project.planQuestions.length) *
-                    100
-                  }%`,
-                  height: '100%',
-                  background: 'var(--color-accent)',
-                  transition: 'width 0.3s',
-                }}
-              />
-            </div>
-            <span style={{ fontSize: 11.5, color: '#75798c' }}>
-              已回答{' '}
-              {project.planAnswers.filter((x) => x?.trim()).length} / {project.planQuestions.length}
-            </span>
-          </div>
+          <PlanProgress
+            answered={project.planAnswers.filter((x) => x?.trim()).length}
+            total={project.planQuestions.length}
+          />
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {project.planQuestions.map((q, i) => {
@@ -230,6 +205,86 @@ export function Plan() {
         </>
       )}
     </div>
+  )
+}
+
+function PlanProgress({ answered, total }: { answered: number; total: number }) {
+  const [isPinned, setIsPinned] = useState(false)
+
+  useEffect(() => {
+    const updatePinnedState = () => setIsPinned(window.scrollY > 0)
+
+    updatePinnedState()
+    window.addEventListener('scroll', updatePinnedState, { passive: true })
+    return () => window.removeEventListener('scroll', updatePinnedState)
+  }, [])
+
+  const progress = (answered / total) * 100
+  const content = (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        width: '100%',
+        maxWidth: 880,
+        marginInline: 'auto',
+      }}
+    >
+      <div
+        role="progressbar"
+        aria-label="回答进度"
+        aria-valuemin={0}
+        aria-valuemax={total}
+        aria-valuenow={answered}
+        style={{
+          flex: 1,
+          maxWidth: 360,
+          minWidth: 0,
+          height: 7,
+          borderRadius: 4,
+          background: 'rgba(145,132,217,.16)',
+          border: '1px solid rgba(145,132,217,.22)',
+          overflow: 'hidden',
+        }}
+      >
+        <div
+          style={{
+            width: `${progress}%`,
+            height: '100%',
+            borderRadius: 4,
+            background: 'var(--color-accent)',
+            transition: 'width 0.3s',
+          }}
+        />
+      </div>
+      <span style={{ fontSize: 11.5, color: '#75798c' }}>
+        已回答 {answered} / {total}
+      </span>
+    </div>
+  )
+
+  return (
+    <>
+      <div style={{ height: 18, marginBottom: 22 }}>{!isPinned && content}</div>
+      {isPinned && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 88,
+            left: 0,
+            right: 0,
+            zIndex: 15,
+            padding: '8px 34px',
+            background: 'rgba(19,21,35,.94)',
+            backdropFilter: 'blur(10px)',
+            borderBottom: '1px solid var(--color-divider)',
+          }}
+        >
+          {content}
+        </div>
+      )}
+    </>
   )
 }
 
