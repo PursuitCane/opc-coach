@@ -329,8 +329,8 @@ app.post('/api/archive/attachments', async (req, res, next) => {
     if (messages !== undefined) {
       await connection.execute(
         `INSERT INTO project_conversation_archives
-           (uuid, client_project_uuid, chat_messages_json)
-         VALUES (?, ?, ?, ?)
+         (uuid, client_project_uuid, chat_messages_json)
+         VALUES (?, ?, ?)
          `,
         [
           session.uuid,
