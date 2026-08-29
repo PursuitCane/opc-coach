@@ -1,13 +1,16 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useAppStore, useCurrentProject } from '../store'
 import { RadarChart } from '../components/RadarChart'
 import { useAnalysisRequestPending } from '../lib/analysisRequest'
+import type { AuthUser } from '../lib/auth'
 
 interface Props {
   onOpenMaterials: () => void
+  user: AuthUser
 }
 
-export function Analysis({ onOpenMaterials }: Props) {
+export function Analysis({ onOpenMaterials, user }: Props) {
   const project = useCurrentProject()
   const setTab = useAppStore((s) => s.setTab)
   const setPendingChatSeed = useAppStore((s) => s.setPendingChatSeed)
@@ -311,13 +314,79 @@ export function Analysis({ onOpenMaterials }: Props) {
           </div>
         )}
       </div>
-      {posterOpen && <Poster projectName={project.name} score={a.score} dims={a.dims.map((d) => [d.label, d.value])} onClose={() => setPosterOpen(false)} />}
+      {posterOpen && <Poster imageNo={user.bptiImageNo} onClose={() => setPosterOpen(false)} />}
     </div>
   )
 }
 
-function Poster({ projectName, score, dims, onClose }: { projectName: string; score: number; dims: [string, number][]; onClose: () => void }) {
-  return <div className="poster-backdrop" onClick={onClose}><div className="bpti-poster" onClick={(e) => e.stopPropagation()}><button className="poster-close" onClick={onClose}>×</button><div className="profile-kicker">OPC COACH · BPTI</div><h2>你的商业计划属性</h2><h3>{projectName}</h3><div className="poster-score">{score}<span>/ 100</span></div><p>这是一份仍在验证中的商业计划。先把最关键的假设变成可观察的数据，再决定下一步扩大什么。</p><div className="poster-dims">{dims.map(([label, value]) => <div key={label}><span>{label}</span><i><b style={{ width: `${value}%` }} /></i><em>{value}</em></div>)}</div><button className="btn btn-primary" onClick={onClose}>保存图片</button></div></div>
+function Poster({ imageNo, onClose }: { imageNo: number; onClose: () => void }) {
+  const safeImageNo = Number.isInteger(imageNo) && imageNo >= 1 && imageNo <= 16 ? imageNo : 6
+  const [downloading, setDownloading] = useState(false)
+
+  const downloadPoster = async () => {
+    setDownloading(true)
+    try {
+      const loadImage = (src: string) => new Promise<HTMLImageElement>((resolve, reject) => {
+        const image = new Image()
+        image.onload = () => resolve(image)
+        image.onerror = () => reject(new Error(`图片加载失败：${src}`))
+        image.src = src
+      })
+
+      const [posterImage, qrImage] = await Promise.all([
+        loadImage(`/share/${safeImageNo}.png`),
+        loadImage('/opc-coach-qr.png'),
+      ])
+      const canvas = document.createElement('canvas')
+      canvas.width = posterImage.naturalWidth
+      canvas.height = posterImage.naturalHeight
+      const context = canvas.getContext('2d')
+      if (!context) throw new Error('无法创建海报画布')
+
+      context.drawImage(posterImage, 0, 0)
+      const qrWidth = canvas.width * 0.2
+      const qrHeight = qrWidth * (qrImage.naturalHeight / qrImage.naturalWidth)
+      const qrX = canvas.width * 0.1
+      const qrY = canvas.height * (1 - 0.19) - qrHeight
+      context.drawImage(qrImage, qrX, qrY, qrWidth, qrHeight)
+
+      context.fillStyle = '#2f2a2a'
+      context.font = '500 30px "PingFang SC", "Microsoft YaHei", sans-serif'
+      context.fillText('测测你的BP“人格”：', canvas.width * 0.1, canvas.height * 0.845)
+      context.fillText('进群获取链接即可开测', canvas.width * 0.1, canvas.height * 0.87)
+
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'))
+      if (!blob) throw new Error('海报生成失败')
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `bpti-poster-${safeImageNo}.png`
+      link.click()
+      URL.revokeObjectURL(url)
+    } finally {
+      setDownloading(false)
+    }
+  }
+
+  return createPortal(
+    <div className="poster-backdrop" role="presentation" onClick={onClose}>
+      <div className="poster-dialog" role="dialog" aria-modal="true" aria-label="BPTI 海报" onClick={(e) => e.stopPropagation()}>
+        <div className="bpti-poster">
+          <button className="poster-close" aria-label="关闭海报" onClick={onClose}>×</button>
+          <img className="bpti-poster-image" src={`/share/${safeImageNo}.png`} alt={`BPTI 海报 ${safeImageNo}`} />
+          <img className="bpti-poster-qr" src="/opc-coach-qr.png" alt="OPC Coach 二维码" />
+          <div className="bpti-poster-copy" aria-hidden="true">
+            <div>测测你的BP“人格”：</div>
+            <div>进群获取链接即可开测</div>
+          </div>
+        </div>
+        <button className="btn btn-primary poster-share" onClick={downloadPoster} disabled={downloading}>
+          {downloading ? '生成中…' : '分享海报'}
+        </button>
+      </div>
+    </div>,
+    document.body,
+  )
 }
 
 function EmptyAnalysis({ requestPending }: { requestPending: boolean }) {

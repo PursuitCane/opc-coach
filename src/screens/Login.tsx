@@ -1,10 +1,11 @@
 import { Auth } from '../components/Auth'
+import type { AuthUser } from '../lib/auth'
 
 const PAINS = [['方向对不对？', '该不该继续？'], ['下一步做什么？', '问题出在哪？'], ['资源怎么找？', '该联系谁？'], ['怎么落地和复盘？', '结果如何闭环？']]
 const FEATURES = [['商业分析', '基于精益创业、YC、红杉资本等经典商业方法论，实现商业分析。'], ['优化商业计划', '从投资人视角，帮你优化商业计划。'], ['企业画像', '基于企业画像，提供政策、陪验资、场景合作等服务。'], ['AI 沟通', '基于苏格拉底式提问，用多轮对话引导你理清思路和复盘结果。'], ['成长记录', '记录每一次决策点、行动和结果，基于长期记忆持续陪跑。'], ['服务市场', '针对 OPC 提供专业孵化服务，包含创业活动、咨询陪跑等合作。']]
 
 interface Props {
-  onAuthenticated: () => void
+  onAuthenticated: (user: AuthUser) => void
 }
 
 export function Login({ onAuthenticated }: Props) {

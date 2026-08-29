@@ -1,6 +1,7 @@
 export interface AuthUser {
   uuid: string
   email: string
+  bptiImageNo: number
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {

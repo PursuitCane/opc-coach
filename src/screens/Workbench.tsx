@@ -8,12 +8,14 @@ import { Diary } from '../tabs/Diary'
 import { Market } from '../tabs/Market'
 import { Materials } from '../tabs/Materials'
 import { Profile } from '../tabs/Profile'
+import type { AuthUser } from '../lib/auth'
 
 interface Props {
   onLogout: () => Promise<void> | void
+  user: AuthUser
 }
 
-export function Workbench({ onLogout }: Props) {
+export function Workbench({ onLogout, user }: Props) {
   const tab = useAppStore((s) => s.tab)
   const [materialsOpen, setMaterialsOpen] = useState(false)
 
@@ -21,7 +23,7 @@ export function Workbench({ onLogout }: Props) {
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <Header onLogout={onLogout} onOpenMaterials={() => setMaterialsOpen(true)} />
       <main style={{ flex: 1, padding: '24px 34px 56px' }}>
-        {tab === 'analysis' && <Analysis onOpenMaterials={() => setMaterialsOpen(true)} />}
+        {tab === 'analysis' && <Analysis onOpenMaterials={() => setMaterialsOpen(true)} user={user} />}
         {tab === 'plan' && <Plan />}
         {tab === 'profile' && <Profile onOpenMaterials={() => setMaterialsOpen(true)} />}
         {tab === 'chat' && <Chat />}

@@ -54,6 +54,21 @@ const MAX_CODE_ATTEMPTS = 5
 const SESSION_COOKIE = 'opc_session'
 const SESSION_TTL_DAYS = 30
 
+async function ensureUsersBptiImageColumn() {
+  const [columns] = await pool.execute(
+    `SELECT COUNT(*) AS count
+       FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'users'
+        AND COLUMN_NAME = 'bpti_image_no'`,
+  )
+  if (Number(columns[0]?.count || 0) === 0) {
+    await pool.execute(
+      "ALTER TABLE users ADD COLUMN bpti_image_no TINYINT UNSIGNED NOT NULL DEFAULT 1 COMMENT 'BPTI 海报图片编号，1-16' AFTER email",
+    )
+  }
+}
+
 function normalizeEmail(value) {
   return typeof value === 'string' ? value.trim().toLowerCase() : ''
 }
@@ -462,11 +477,11 @@ app.post('/api/auth/verify-code', async (req, res, next) => {
     }
 
     await pool.execute(
-      `INSERT INTO users (uuid, email) VALUES (?, ?)
+      `INSERT INTO users (uuid, email, bpti_image_no) VALUES (?, ?, ?)
        ON DUPLICATE KEY UPDATE last_login_at = CURRENT_TIMESTAMP(3)`,
-      [randomUUID(), email],
+      [randomUUID(), email, randomInt(1, 17)],
     )
-    const [users] = await pool.execute('SELECT uuid, email FROM users WHERE email = ?', [email])
+    const [users] = await pool.execute('SELECT uuid, email, bpti_image_no AS bptiImageNo FROM users WHERE email = ?', [email])
     const user = users[0]
     if (!user) return next(new Error('用户创建失败。'))
     await pool.execute(
@@ -488,11 +503,11 @@ app.post('/api/auth/dev-login', async (req, res, next) => {
 
   try {
     await pool.execute(
-      `INSERT INTO users (uuid, email) VALUES (?, ?)
+      `INSERT INTO users (uuid, email, bpti_image_no) VALUES (?, ?, ?)
        ON DUPLICATE KEY UPDATE last_login_at = CURRENT_TIMESTAMP(3)`,
-      [randomUUID(), email],
+      [randomUUID(), email, randomInt(1, 17)],
     )
-    const [users] = await pool.execute('SELECT uuid, email FROM users WHERE email = ?', [email])
+    const [users] = await pool.execute('SELECT uuid, email, bpti_image_no AS bptiImageNo FROM users WHERE email = ?', [email])
     const user = users[0]
     if (!user) return next(new Error('用户创建失败。'))
     setSession(res, user.uuid)
@@ -506,7 +521,7 @@ app.get('/api/auth/me', async (req, res, next) => {
   const session = currentUser(req)
   if (!session) return res.status(401).json({ error: '未登录' })
   try {
-    const [users] = await pool.execute('SELECT uuid, email FROM users WHERE uuid = ?', [session.uuid])
+    const [users] = await pool.execute('SELECT uuid, email, bpti_image_no AS bptiImageNo FROM users WHERE uuid = ?', [session.uuid])
     const user = users[0]
     if (!user) return res.status(401).json({ error: '未登录' })
     return res.json({ user })
@@ -533,4 +548,9 @@ app.use((req, res) => {
   return res.sendFile(path.join(dist, 'index.html'))
 })
 
-app.listen(config.port, () => console.log(`OPC 军师运行在 :${config.port}`))
+ensureUsersBptiImageColumn()
+  .then(() => app.listen(config.port, () => console.log(`OPC 军师运行在 :${config.port}`)))
+  .catch((error) => {
+    console.error('数据库初始化失败', error)
+    process.exitCode = 1
+  })

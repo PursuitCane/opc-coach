@@ -6,12 +6,14 @@ import { Empty } from './screens/Empty'
 import { Creating } from './screens/Creating'
 import { Workbench } from './screens/Workbench'
 import { MobileAccessDialog } from './components/MobileAccessDialog'
+import type { AuthUser } from './lib/auth'
 
 export default function App() {
   const screen = useAppStore((s) => s.screen)
   const doLogin = useAppStore((s) => s.doLogin)
   const [authReady, setAuthReady] = useState(false)
   const [authenticated, setAuthenticated] = useState(false)
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null)
 
   const handleLogout = async () => {
     try {
@@ -28,6 +30,7 @@ export default function App() {
     getCurrentUser()
       .then((user) => {
         if (user) {
+          setAuthUser(user)
           setAuthenticated(true)
           doLogin()
         }
@@ -40,8 +43,9 @@ export default function App() {
   if (authReady) {
     if (!authenticated) {
       content = (
-        <Login
-          onAuthenticated={() => {
+          <Login
+          onAuthenticated={(user) => {
+            setAuthUser(user)
             setAuthenticated(true)
             doLogin()
           }}
@@ -59,7 +63,7 @@ export default function App() {
           content = <Creating />
           break
         case 'app':
-          content = <Workbench onLogout={handleLogout} />
+          content = authUser ? <Workbench onLogout={handleLogout} user={authUser} /> : null
           break
       }
     }

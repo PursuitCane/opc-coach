@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { devLogin, requestEmailCode, verifyEmailCode } from '../lib/auth'
+import { devLogin, requestEmailCode, verifyEmailCode, type AuthUser } from '../lib/auth'
 
 interface Props {
-  onAuthenticated: () => void
+  onAuthenticated: (user: AuthUser) => void
 }
 
 export function Auth({ onAuthenticated }: Props) {
@@ -42,8 +42,8 @@ export function Auth({ onAuthenticated }: Props) {
     setError('')
     setBusy(true)
     try {
-      await verifyEmailCode(email, code)
-      onAuthenticated()
+      const user = await verifyEmailCode(email, code)
+      onAuthenticated(user)
     } catch (e) {
       setError(e instanceof Error ? e.message : '登录失败。')
     } finally {
@@ -55,8 +55,8 @@ export function Auth({ onAuthenticated }: Props) {
     setError('')
     setDevBusy(true)
     try {
-      await devLogin(email)
-      onAuthenticated()
+      const user = await devLogin(email)
+      onAuthenticated(user)
     } catch (e) {
       setError(e instanceof Error ? e.message : '本地登录失败。')
     } finally {
