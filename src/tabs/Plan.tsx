@@ -209,16 +209,6 @@ export function Plan() {
 }
 
 function PlanProgress({ answered, total }: { answered: number; total: number }) {
-  const [isPinned, setIsPinned] = useState(false)
-
-  useEffect(() => {
-    const updatePinnedState = () => setIsPinned(window.scrollY > 0)
-
-    updatePinnedState()
-    window.addEventListener('scroll', updatePinnedState, { passive: true })
-    return () => window.removeEventListener('scroll', updatePinnedState)
-  }, [])
-
   const progress = (answered / total) * 100
   const content = (
     <div
@@ -239,7 +229,6 @@ function PlanProgress({ answered, total }: { answered: number; total: number }) 
         aria-valuenow={answered}
         style={{
           flex: 1,
-          maxWidth: 360,
           minWidth: 0,
           height: 7,
           borderRadius: 4,
@@ -265,26 +254,22 @@ function PlanProgress({ answered, total }: { answered: number; total: number }) 
   )
 
   return (
-    <>
-      <div style={{ height: 18, marginBottom: 22 }}>{!isPinned && content}</div>
-      {isPinned && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 88,
-            left: 0,
-            right: 0,
-            zIndex: 15,
-            padding: '8px 34px',
-            background: 'rgba(19,21,35,.94)',
-            backdropFilter: 'blur(10px)',
-            borderBottom: '1px solid var(--color-divider)',
-          }}
-        >
-          {content}
-        </div>
-      )}
-    </>
+    <div
+      style={{
+        position: 'sticky',
+        top: 103,
+        zIndex: 15,
+        height: 34,
+        marginBottom: 22,
+        padding: '8px 0',
+        background: 'rgba(19,21,35,.94)',
+        backdropFilter: 'blur(10px)',
+        borderBottom: '1px solid var(--color-divider)',
+        boxShadow: '0 -15px 0 rgba(19,21,35,.94)',
+      }}
+    >
+      {content}
+    </div>
   )
 }
 
