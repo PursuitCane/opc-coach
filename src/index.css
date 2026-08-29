@@ -299,11 +299,13 @@ textarea.input {
 .analysis-loading-dots { display: inline-block; width: 20px; color: var(--color-accent); animation: opcDot 1.2s ease-in-out infinite; }
 .analysis-empty-mark { width: 38px; height: 38px; margin-bottom: 20px; border: 1px solid #4a4e60; border-radius: 50%; display: grid; place-items: center; color: #9397ab; font-size: 18px; }
 .market-toast { position: fixed; left: 50%; bottom: 34px; transform: translateX(-50%); z-index: 60; padding: 11px 18px; border-radius: 10px; background: #2b2d3b; box-shadow: var(--shadow-md); font-size: 13px; color: #e9e9ed; animation: opcFade .25s both; white-space: nowrap; }
+.user-menu-toast { position: fixed; left: 50%; bottom: 34px; transform: translateX(-50%); z-index: 60; padding: 11px 18px; border-radius: 10px; background: #2b2d3b; box-shadow: var(--shadow-md); font-size: 13px; color: #e9e9ed; animation: opcFade .25s both; white-space: nowrap; }
 
 @media (max-width: 760px) {
   .market-page { max-width: none !important; }
   .market-grid { grid-template-columns: 1fr !important; }
   .market-toast { max-width: calc(100vw - 40px); overflow: hidden; text-overflow: ellipsis; }
+  .user-menu-toast { max-width: calc(100vw - 40px); overflow: hidden; text-overflow: ellipsis; }
 }
 
 @keyframes opcFade {

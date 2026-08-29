@@ -1,9 +1,11 @@
 import { useAppStore, useCurrentProject } from '../store'
 import type { Project, Tab } from '../store/types'
+import type { AuthUser } from '../lib/auth'
 import { UserMenu } from './UserMenu'
 
 interface Props {
   onLogout: () => Promise<void> | void
+  user: AuthUser
 }
 
 const TAB_LABELS: { key: Tab; label: string; badge?: (s: ReturnType<typeof getBadgeData>) => string }[] = [
@@ -126,9 +128,9 @@ export function Header({ onLogout }: Props) {
             title="暂不支持创建新项目"
             style={{ fontSize: 12.5 }}
           >
-            ＋ 新建项目（即将开放）
+            ＋ 新建项目
           </button>
-          <UserMenu onLogout={onLogout} />
+          <UserMenu onLogout={onLogout} email={user.email} />
         </div>
       </div>
 

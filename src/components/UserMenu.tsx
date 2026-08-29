@@ -2,12 +2,16 @@ import { useEffect, useRef, useState } from 'react'
 
 interface Props {
   onLogout: () => Promise<void> | void
+  email: string
 }
 
-export function UserMenu({ onLogout }: Props) {
+export function UserMenu({ onLogout, email }: Props) {
   const [open, setOpen] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
+  const [toast, setToast] = useState('')
   const menuRef = useRef<HTMLDivElement>(null)
+  const username = email.split('@')[0] || email || '用户'
+  const avatar = Array.from(username)[0] || '用'
 
   useEffect(() => {
     if (!open) return
@@ -29,6 +33,12 @@ export function UserMenu({ onLogout }: Props) {
     }
   }, [open])
 
+  useEffect(() => {
+    if (!toast) return
+    const timer = window.setTimeout(() => setToast(''), 2200)
+    return () => window.clearTimeout(timer)
+  }, [toast])
+
   const handleLogout = async () => {
     if (loggingOut) return
     setLoggingOut(true)
@@ -38,6 +48,11 @@ export function UserMenu({ onLogout }: Props) {
       setLoggingOut(false)
       setOpen(false)
     }
+  }
+
+  const showToast = (message: string) => {
+    setOpen(false)
+    setToast(message)
   }
 
   return (
@@ -51,7 +66,8 @@ export function UserMenu({ onLogout }: Props) {
           display: 'flex',
           alignItems: 'center',
           gap: 7,
-          padding: 0,
+          padding: '4px 6px',
+          borderRadius: 8,
           border: 0,
           background: 'transparent',
           color: '#9397ab',
@@ -71,9 +87,9 @@ export function UserMenu({ onLogout }: Props) {
             color: '#cfd3e5',
           }}
         >
-          我
+          {avatar}
         </span>
-        我
+        {username}
         <span aria-hidden="true" style={{ fontSize: 10, color: '#75798c' }}>
           ▾
         </span>
@@ -84,51 +100,77 @@ export function UserMenu({ onLogout }: Props) {
           role="menu"
           style={{
             position: 'absolute',
-            top: 'calc(100% + 12px)',
+            top: 38,
             right: 0,
-            zIndex: 30,
-            minWidth: 168,
-            padding: 7,
-            border: '1px solid #4a4e60',
+            zIndex: 40,
+            width: 232,
+            padding: 8,
             borderRadius: 11,
             background: '#232532',
-            boxShadow: '0 14px 35px rgba(0, 0, 0, .35)',
+            boxShadow: 'var(--shadow-md)',
+            animation: 'opcFade .18s both',
           }}
         >
-          <div
-            style={{
-              padding: '8px 10px 9px',
-              borderBottom: '1px solid var(--color-divider)',
-              color: '#75798c',
-              fontSize: 11,
-            }}
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => showToast('OPC Token 余额 1,280，可用于抵扣服务费用')}
+            style={menuItemStyle('#e9e9ed')}
           >
-            账户
-          </div>
+            OPC Token<span style={menuValueStyle}>1,280</span>
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => showToast('成长积分 420，本周 +35')}
+            style={menuItemStyle('#e9e9ed')}
+          >
+            成长积分<span style={menuValueStyle}>420</span>
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => showToast('将在正式版本中开放')}
+            style={menuItemStyle('#e9e9ed')}
+          >
+            权益兑换<span style={menuValueStyle}>3 项可兑换</span>
+          </button>
           <button
             type="button"
             role="menuitem"
             onClick={() => void handleLogout()}
             disabled={loggingOut}
-            style={{
-              display: 'block',
-              width: '100%',
-              marginTop: 5,
-              padding: '9px 10px',
-              border: 0,
-              borderRadius: 7,
-              background: 'transparent',
-              color: 'var(--color-accent-300)',
-              textAlign: 'left',
-              font: 'inherit',
-              fontSize: 13,
-              cursor: loggingOut ? 'wait' : 'pointer',
-            }}
+            style={menuItemStyle('var(--color-accent)')}
           >
             {loggingOut ? '正在退出…' : '退出登录'}
           </button>
         </div>
       )}
+      {toast && <div className="user-menu-toast">{toast}</div>}
     </div>
   )
+}
+
+const menuValueStyle = {
+  marginLeft: 'auto',
+  fontSize: 12,
+  color: '#75798c',
+}
+
+function menuItemStyle(color: string) {
+  return {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    width: '100%',
+    textAlign: 'left' as const,
+    padding: '8px 10px',
+    border: 0,
+    borderRadius: 8,
+    background: 'transparent',
+    cursor: 'pointer',
+    fontFamily: 'var(--font-body)',
+    fontSize: 13,
+    color,
+  }
 }
