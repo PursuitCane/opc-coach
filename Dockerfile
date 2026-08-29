@@ -12,14 +12,6 @@ RUN npm ci --include=dev
 
 COPY . ./
 
-# Vite reads VITE_* variables at build time.
-ARG VITE_OPENAI_BASE_URL
-ARG VITE_OPENAI_API_KEY
-ARG VITE_OPENAI_MODEL
-ENV VITE_OPENAI_BASE_URL=$VITE_OPENAI_BASE_URL \
-    VITE_OPENAI_API_KEY=$VITE_OPENAI_API_KEY \
-    VITE_OPENAI_MODEL=$VITE_OPENAI_MODEL
-
 RUN npm run build
 
 # Run the email-auth API and serve the built client from the same process.

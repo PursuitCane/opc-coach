@@ -1,19 +1,11 @@
 // OpenAI-compatible transit client (openai-next)
 // Provides three levels: text / JSON-structured / streaming
 
-const BASE_URL = import.meta.env.VITE_OPENAI_BASE_URL || 'https://api.openai-next.com/v1'
-const API_KEY = import.meta.env.VITE_OPENAI_API_KEY || ''
-const MODEL = import.meta.env.VITE_OPENAI_MODEL || 'gpt-5'
+const AI_PATH = '/api/ai'
 
 export interface AIMessage {
   role: 'system' | 'user' | 'assistant'
   content: string
-}
-
-function requireKey() {
-  if (!API_KEY) {
-    throw new Error('缺少 API Key。请在 .env 里设置 VITE_OPENAI_API_KEY。')
-  }
 }
 
 /** Robust JSON extraction: strip ```json fences, take outermost {...}. */
@@ -36,21 +28,20 @@ export async function callAI(opts: {
   jsonMode?: boolean
   signal?: AbortSignal
 }): Promise<string> {
-  requireKey()
   const messages: AIMessage[] = opts.system
     ? [{ role: 'system', content: opts.system }, ...opts.messages]
     : opts.messages
 
-  const body: Record<string, unknown> = { model: MODEL, messages }
+  const body: Record<string, unknown> = { messages }
   if (opts.jsonMode) body.response_format = { type: 'json_object' }
 
-  const res = await fetch(`${BASE_URL}/chat/completions`, {
+  const res = await fetch(AI_PATH, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${API_KEY}`,
     },
-    body: JSON.stringify(body),
+    credentials: 'include',
+    body: JSON.stringify({ ...body, stream: false }),
     signal: opts.signal,
   })
 
@@ -81,7 +72,7 @@ export async function callAIJson<T>(opts: {
   const cleaned = extractJson(raw)
   try {
     return JSON.parse(cleaned) as T
-  } catch (e) {
+  } catch {
     console.error('AI JSON parse failed. Raw:', raw)
     throw new Error('AI 返回的 JSON 解析失败，再试一次或换份材料。')
   }
@@ -93,18 +84,17 @@ export async function callAIStream(opts: {
   messages: AIMessage[]
   onDelta: (chunk: string) => void
 }): Promise<string> {
-  requireKey()
   const messages: AIMessage[] = opts.system
     ? [{ role: 'system', content: opts.system }, ...opts.messages]
     : opts.messages
 
-  const res = await fetch(`${BASE_URL}/chat/completions`, {
+  const res = await fetch(AI_PATH, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${API_KEY}`,
     },
-    body: JSON.stringify({ model: MODEL, messages, stream: true }),
+    credentials: 'include',
+    body: JSON.stringify({ messages, stream: true }),
   })
   if (!res.ok || !res.body) {
     const text = await res.text().catch(() => '')

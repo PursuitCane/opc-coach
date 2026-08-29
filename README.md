@@ -46,8 +46,11 @@ npm run dev            # 终端二：Vite，默认 :5173
 - `COS_SECRET_ID`、`COS_SECRET_KEY`：腾讯云 API 密钥，仅服务端使用。
 - `COS_REGION`：COS 存储桶地域，例如 `ap-guangzhou`。
 - `COS_BUCKET`：COS 存储桶名称（包含 AppID 后缀）。
+- `OPENAI_API_KEY`：仅由 Node 服务端使用的 OpenAI 兼容接口密钥。
+- `OPENAI_BASE_URL`：OpenAI 兼容接口地址，默认 `https://api.openai-next.com/v1`。
+- `OPENAI_MODEL`：模型名称，默认 `gpt-5`。
 
-`RESEND_API_KEY`、数据库连接和两个认证密钥**不能**以 `VITE_` 开头；只有 Node 能读取它们。现有 `VITE_OPENAI_API_KEY` 仍会暴露在浏览器，正式上线前应迁移为服务端 AI 调用。
+AI 请求现在由 Node 服务端代理，密钥不会打进浏览器，也不需要配置 Vite 的构建参数。生产环境只需注入上述 `OPENAI_*` 运行时环境变量，并重启服务。
 
 ## 演示脚本
 

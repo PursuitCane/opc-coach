@@ -76,7 +76,7 @@ export function Auth({ onAuthenticated }: Props) {
           value={email}
           autoComplete="email"
           onChange={(event) => setEmail(event.target.value)}
-          disabled={busy || sent}
+          disabled={busy}
         />
       </div>
       <div className="field">
@@ -89,7 +89,7 @@ export function Auth({ onAuthenticated }: Props) {
             maxLength={6}
             value={code}
             onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))}
-            disabled={busy || !sent}
+            disabled={busy}
           />
           <button
             className="btn btn-secondary"
@@ -106,7 +106,7 @@ export function Auth({ onAuthenticated }: Props) {
           className="btn btn-primary btn-block"
           style={{ height: 40 }}
           onClick={verifyCode}
-          disabled={busy || !sent || code.length !== 6}
+          disabled={busy || code.length !== 6}
         >
           {busy && sent ? '验证中…' : '登录，进入工作台'}
         </button>

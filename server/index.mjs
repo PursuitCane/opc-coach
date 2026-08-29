@@ -8,7 +8,7 @@ import mysql from 'mysql2/promise'
 import multer from 'multer'
 import { Resend } from 'resend'
 
-const required = ['MYSQL_URL', 'AUTH_SESSION_SECRET', 'AUTH_CODE_SECRET', 'RESEND_API_KEY', 'EMAIL_FROM']
+const required = ['MYSQL_URL', 'AUTH_SESSION_SECRET', 'AUTH_CODE_SECRET', 'RESEND_API_KEY', 'EMAIL_FROM', 'OPENAI_API_KEY']
 const missing = required.filter((name) => !process.env[name])
 if (missing.length) {
   throw new Error(`缺少服务端环境变量：${missing.join(', ')}`)
@@ -22,6 +22,11 @@ const config = {
   emailFrom: process.env.EMAIL_FROM,
   environment: process.env.NODE_ENV || 'development',
   isProduction: process.env.NODE_ENV === 'production',
+  ai: {
+    apiKey: process.env.OPENAI_API_KEY,
+    baseUrl: (process.env.OPENAI_BASE_URL || 'https://api.openai-next.com/v1').replace(/\/+$/, ''),
+    model: process.env.OPENAI_MODEL || 'gpt-5',
+  },
   cos: {
     secretId: process.env.COS_SECRET_ID,
     secretKey: process.env.COS_SECRET_KEY,
@@ -107,6 +112,77 @@ function currentUser(req) {
 }
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }))
+
+function isAiMessage(value) {
+  return value && typeof value === 'object'
+    && ['system', 'user', 'assistant'].includes(value.role)
+    && typeof value.content === 'string'
+    && value.content.length <= 200_000
+}
+
+app.post('/api/ai', async (req, res, next) => {
+  if (!currentUser(req)) return res.status(401).json({ error: '未登录' })
+
+  const body = req.body && typeof req.body === 'object' ? req.body : {}
+  const messages = Array.isArray(body.messages) ? body.messages : null
+  const system = body.system
+  const stream = body.stream === true
+  const jsonMode = body.response_format?.type === 'json_object'
+
+  if (!messages || messages.length === 0 || messages.length > 100 || !messages.every(isAiMessage)) {
+    return res.status(400).json({ error: 'AI 消息格式无效。' })
+  }
+  if (system !== undefined && !isAiMessage({ role: 'system', content: system })) {
+    return res.status(400).json({ error: 'AI 系统提示格式无效。' })
+  }
+
+  const upstreamMessages = system === undefined
+    ? messages
+    : [{ role: 'system', content: system }, ...messages]
+
+  try {
+    const upstream = await fetch(`${config.ai.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        Accept: stream ? 'text/event-stream' : 'application/json',
+        Authorization: `Bearer ${config.ai.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: config.ai.model,
+        messages: upstreamMessages,
+        ...(jsonMode ? { response_format: { type: 'json_object' } } : {}),
+        ...(stream ? { stream: true } : {}),
+      }),
+    })
+
+    if (!upstream.ok) {
+      const text = await upstream.text().catch(() => '')
+      res.status(upstream.status)
+      if (upstream.headers.get('content-type')) res.setHeader('Content-Type', upstream.headers.get('content-type'))
+      return res.send(text)
+    }
+
+    if (!stream) {
+      const text = await upstream.text()
+      if (upstream.headers.get('content-type')) res.setHeader('Content-Type', upstream.headers.get('content-type'))
+      return res.send(text)
+    }
+
+    if (!upstream.body) return res.status(502).json({ error: 'AI 接口没有返回流。' })
+    res.setHeader('Content-Type', upstream.headers.get('content-type') || 'text/event-stream; charset=utf-8')
+    res.setHeader('Cache-Control', 'no-cache, no-transform')
+    res.setHeader('Connection', 'keep-alive')
+    res.flushHeaders()
+    for await (const chunk of upstream.body) {
+      if (res.destroyed) break
+      res.write(chunk)
+    }
+    return res.end()
+  } catch (error) {
+    return next(error)
+  }
+})
 
 function safeFileName(name) {
   const base = path.basename(typeof name === 'string' ? name : 'material')
