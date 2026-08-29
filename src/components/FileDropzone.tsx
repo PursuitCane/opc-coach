@@ -24,6 +24,10 @@ export function FileDropzone({ onStaged, compact, disabled = false }: Props) {
   const [error, setError] = useState('')
   const [dragOver, setDragOver] = useState(false)
 
+  const isFileDrag = (event: React.DragEvent<HTMLDivElement>) => {
+    return Array.from(event.dataTransfer.types).includes('Files')
+  }
+
   const handleFiles = async (list: FileList | null) => {
     if (!list || list.length === 0 || busy || disabled) return
     setError('')
@@ -65,15 +69,34 @@ export function FileDropzone({ onStaged, compact, disabled = false }: Props) {
   return (
     <div>
       <div
+        role="button"
+        tabIndex={disabled ? -1 : 0}
+        aria-disabled={disabled}
+        onKeyDown={(e) => {
+          if (!disabled && (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault()
+            inputRef.current?.click()
+          }
+        }}
+        onDragEnter={(e) => {
+          if (!disabled && !busy && isFileDrag(e)) {
+            e.preventDefault()
+            setDragOver(true)
+          }
+        }}
         onDragOver={(e) => {
           e.preventDefault()
-          setDragOver(true)
+          e.dataTransfer.dropEffect = disabled || busy ? 'none' : 'copy'
+          if (!disabled && !busy && isFileDrag(e)) setDragOver(true)
         }}
-        onDragLeave={() => setDragOver(false)}
+        onDragLeave={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragOver(false)
+        }}
+        onDragEnd={() => setDragOver(false)}
         onDrop={(e) => {
           e.preventDefault()
           setDragOver(false)
-          handleFiles(e.dataTransfer.files)
+          if (!disabled && !busy && isFileDrag(e)) handleFiles(e.dataTransfer.files)
         }}
         onClick={() => inputRef.current?.click()}
         style={{
