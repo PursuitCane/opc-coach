@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAppStore, useCurrentProject } from '../store'
 import { RadarChart } from '../components/RadarChart'
+import { useAnalysisRequestPending } from '../lib/analysisRequest'
 
 interface Props {
   onOpenMaterials: () => void
@@ -11,9 +12,10 @@ export function Analysis({ onOpenMaterials }: Props) {
   const setTab = useAppStore((s) => s.setTab)
   const setPendingChatSeed = useAppStore((s) => s.setPendingChatSeed)
   const [posterOpen, setPosterOpen] = useState(false)
+  const analysisRequestPending = useAnalysisRequestPending(project?.id ?? null)
 
   if (!project?.analysis) {
-    return <EmptyAnalysis />
+    return <EmptyAnalysis requestPending={analysisRequestPending} />
   }
   const a = project.analysis
   const weakest = a.dims.reduce((x, y) => (x.value < y.value ? x : y))
@@ -318,17 +320,40 @@ function Poster({ projectName, score, dims, onClose }: { projectName: string; sc
   return <div className="poster-backdrop" onClick={onClose}><div className="bpti-poster" onClick={(e) => e.stopPropagation()}><button className="poster-close" onClick={onClose}>×</button><div className="profile-kicker">OPC COACH · BPTI</div><h2>你的商业计划属性</h2><h3>{projectName}</h3><div className="poster-score">{score}<span>/ 100</span></div><p>这是一份仍在验证中的商业计划。先把最关键的假设变成可观察的数据，再决定下一步扩大什么。</p><div className="poster-dims">{dims.map(([label, value]) => <div key={label}><span>{label}</span><i><b style={{ width: `${value}%` }} /></i><em>{value}</em></div>)}</div><button className="btn btn-primary" onClick={onClose}>保存图片</button></div></div>
 }
 
-function EmptyAnalysis() {
+function EmptyAnalysis({ requestPending }: { requestPending: boolean }) {
   const setScreen = useAppStore((s) => s.setScreen)
 
   return (
-    <div style={{ padding: 40, color: '#75798c', textAlign: 'center' }}>
-      <div style={{ marginBottom: 16 }}>
-        分析结果还没生成，稍等一下或重新上传材料。
-      </div>
-      <button className="btn btn-secondary" onClick={() => setScreen('empty')}>
-        返回上传页
-      </button>
+    <div className="analysis-empty" role="status" aria-live="polite">
+      {requestPending ? (
+        <>
+          <div className="analysis-loading-spinner" aria-hidden="true" />
+          <div className="analysis-empty-title">正在生成分析结果</div>
+          <div className="analysis-empty-copy">
+            请求仍在处理中，请稍等一下
+            <span className="analysis-loading-dots" aria-hidden="true">
+              …
+            </span>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="analysis-empty-mark" aria-hidden="true">
+            —
+          </div>
+          <div className="analysis-empty-title">分析结果还没生成</div>
+          <div className="analysis-empty-copy">
+            当前没有正在等待的分析请求，请重新上传材料后再试。
+          </div>
+        </>
+      )}
+      {!requestPending && (
+        <div className="analysis-empty-action">
+          <button className="btn btn-secondary" onClick={() => setScreen('empty')}>
+            返回上传页
+          </button>
+        </div>
+      )}
     </div>
   )
 }

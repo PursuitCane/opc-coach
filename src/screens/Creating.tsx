@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useAppStore, useCurrentProject } from '../store'
 import { evaluateProject } from '../prompts/analysis'
 import { archiveProject } from '../lib/archive'
+import { trackAnalysisRequest } from '../lib/analysisRequest'
 
 const STEPS = [
   '正在提取材料的结构…',
@@ -35,7 +36,10 @@ export function Creating() {
 
     // 后台真调 AI（一次请求同时拿到分析 + 计划补齐题）
     const isFirst = !project.analysis
-    evaluateProject(project.name, project.files, isFirst, controller.signal)
+    trackAnalysisRequest(
+      project.id,
+      () => evaluateProject(project.name, project.files, isFirst, controller.signal),
+    )
       .then(({ analysis, planQuestions }) => {
         setAnalysis(project.id, analysis)
         if (planQuestions.length > 0) setPlanQuestions(project.id, planQuestions)

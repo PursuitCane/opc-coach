@@ -291,6 +291,13 @@ textarea.input {
 .materials-table-wrap { overflow-x:auto; }
 .materials-dialog-note { padding:18px 20px;border:1px dashed #4a4e60;border-radius:12px;text-align:center;color:#75798c;font-size:12.5px;line-height:1.7; }
 .poster-backdrop { position:fixed;inset:0;z-index:70;background:rgba(9,10,18,.76);backdrop-filter:blur(5px);display:grid;place-items:center;padding:20px; }.bpti-poster { position:relative;width:min(420px,100%);padding:34px;border-radius:16px;background:linear-gradient(145deg,#28264a,#191a2b);box-shadow:0 24px 80px rgba(0,0,0,.55); }.bpti-poster h2 { margin:4px 0 24px;font-size:26px;font-weight:500; }.bpti-poster h3 { margin:0;color:#cfd3e5;font-size:15px;font-weight:400; }.poster-score { margin:18px 0;color:var(--color-accent);font-size:62px;line-height:1;font-family:var(--font-heading); }.poster-score span { margin-left:7px;color:#9397ab;font-size:13px; }.bpti-poster p { color:#b2b6ca;font-size:13px;line-height:1.75; }.poster-dims { margin:24px 0;display:flex;flex-direction:column;gap:11px; }.poster-dims div { display:grid;grid-template-columns:110px 1fr 28px;gap:9px;align-items:center;font-size:11px;color:#cfd3e5; }.poster-dims i { display:block;height:5px;border-radius:6px;background:#39364f;overflow:hidden; }.poster-dims b { display:block;height:100%;background:var(--color-accent);border-radius:6px; }.poster-dims em { color:#9184d9;font-style:normal;text-align:right; }.poster-close { position:absolute;right:13px;top:10px;border:0;background:transparent;color:#9397ab;font-size:24px;cursor:pointer; }
+.analysis-empty { min-height: 310px; display: grid; place-items: center; align-content: center; padding: 40px 24px; color: #75798c; text-align: center; animation: opcFade .3s both; }
+.analysis-empty-title { margin-bottom: 8px; color: var(--color-text); font-family: var(--font-heading); font-size: 17px; }
+.analysis-empty-copy { max-width: 360px; font-size: 12.5px; line-height: 1.7; }
+.analysis-empty-action { margin-top: 20px; }
+.analysis-loading-spinner { width: 38px; height: 38px; margin-bottom: 20px; border: 2px solid rgba(145,132,217,.22); border-top-color: var(--color-accent); border-radius: 50%; animation: opcSpin .9s linear infinite; }
+.analysis-loading-dots { display: inline-block; width: 20px; color: var(--color-accent); animation: opcDot 1.2s ease-in-out infinite; }
+.analysis-empty-mark { width: 38px; height: 38px; margin-bottom: 20px; border: 1px solid #4a4e60; border-radius: 50%; display: grid; place-items: center; color: #9397ab; font-size: 18px; }
 
 @keyframes opcFade {
   from {
