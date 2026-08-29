@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { createJSONStorage, persist } from 'zustand/middleware'
 import { useMemo } from 'react'
 import type {
   Analysis,
@@ -57,6 +57,48 @@ interface State {
   // ---- diary ----
   appendDiary: (d: DiaryEntry) => void
   setCoachLine: (s: string) => void
+}
+
+const PERSIST_NAME = 'opc-coach-v1'
+const ACCOUNT_STORAGE_PREFIX = `${PERSIST_NAME}:user:`
+
+// The store must not hydrate before authentication has identified the user.
+// Each account gets its own localStorage entry, and the old shared key is
+// intentionally never read.
+let activeUserUuid: string | null = null
+
+function accountStorageKey(uuid: string): string {
+  return `${ACCOUNT_STORAGE_PREFIX}${uuid}`
+}
+
+const userScopedStorage = {
+  getItem: (_name: string): string | null => {
+    if (!activeUserUuid) return null
+    return window.localStorage.getItem(accountStorageKey(activeUserUuid))
+  },
+  setItem: (_name: string, value: string): void => {
+    if (!activeUserUuid) return
+    window.localStorage.setItem(accountStorageKey(activeUserUuid), value)
+  },
+  removeItem: (_name: string): void => {
+    if (!activeUserUuid) return
+    window.localStorage.removeItem(accountStorageKey(activeUserUuid))
+  },
+}
+
+const userScopedPersistStorage = createJSONStorage(() => userScopedStorage)
+
+const EMPTY_STATE: Pick<
+  State,
+  'screen' | 'tab' | 'planStage' | 'renaming' | 'draftName' | 'projects' | 'currentProjectId'
+> = {
+  screen: 'login',
+  tab: 'analysis',
+  planStage: 'form',
+  renaming: false,
+  draftName: '',
+  projects: [],
+  currentProjectId: null,
 }
 
 function genId(): string {
@@ -245,29 +287,40 @@ export const useAppStore = create<State>()(
         set((st) => updateCurrent(st, (p) => ({ ...p, coachLine: s }))),
     }),
     {
-      name: 'opc-coach-v1',
-      version: 2,
-      migrate: (persisted, version) => {
-        if (!persisted || typeof persisted !== 'object') return persisted
-        // v1 → v2: 单个 project → projects[]
-        if (version < 2) {
-          const p = persisted as Record<string, unknown>
-          const single = p.project as (Project & { id?: string }) | null | undefined
-          if (single) {
-            const id = single.id || genId()
-            p.projects = [{ ...single, id }]
-            p.currentProjectId = id
-          } else {
-            p.projects = []
-            p.currentProjectId = null
-          }
-          delete p.project
-        }
-        return persisted
-      },
+      // The storage adapter maps this logical name to
+      // `opc-coach-v1:user:${uuid}` for the authenticated account.
+      name: PERSIST_NAME,
+      version: 1,
+      storage: userScopedPersistStorage,
+      skipHydration: true,
     },
   ),
 )
+
+/** Load the local snapshot belonging to the authenticated account. */
+export function loadUserState(userUuid: string): void {
+  activeUserUuid = null
+  useAppStore.setState(EMPTY_STATE)
+
+  activeUserUuid = userUuid
+  const raw = userScopedStorage.getItem(PERSIST_NAME)
+  if (!raw) return
+
+  try {
+    const persisted = JSON.parse(raw) as { state?: Partial<State> }
+    if (persisted.state && typeof persisted.state === 'object') {
+      useAppStore.setState(persisted.state)
+    }
+  } catch {
+    // Ignore malformed account-local data and start this account cleanly.
+  }
+}
+
+/** Clear the active account from memory without deleting its local snapshot. */
+export function clearUserState(): void {
+  activeUserUuid = null
+  useAppStore.setState(EMPTY_STATE)
+}
 
 /** React hook: return the currently active project (or null). */
 export function useCurrentProject(): Project | null {

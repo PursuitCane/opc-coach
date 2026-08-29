@@ -56,7 +56,7 @@ export function Analysis({ onOpenMaterials, user }: Props) {
         </div>
       </div>
 
-      <div style={{ padding: '18px 22px', borderRadius: 12, background: '#232532', boxShadow: 'var(--shadow-sm)', marginBottom: 16, maxWidth: 1100 }}>
+      <div style={{ padding: '18px 22px', borderRadius: 12, background: '#232532', boxShadow: 'var(--shadow-sm)', marginBottom: 16 }}>
         <div style={{ fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--color-accent)', marginBottom: 8 }}>项目综述</div>
         <p style={{ margin: 0, fontSize: 14, lineHeight: 1.85, color: '#cfd3e5' }}>{a.narrative}</p>
       </div>

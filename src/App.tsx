@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useAppStore } from './store'
+import { clearUserState, loadUserState, useAppStore } from './store'
 import { getCurrentUser, logout } from './lib/auth'
 import { Login } from './screens/Login'
 import { Empty } from './screens/Empty'
@@ -22,8 +22,8 @@ export default function App() {
     } catch {
       // 即使服务端请求失败，也要清掉当前页面的登录态，避免用户卡在工作台。
     } finally {
+      clearUserState()
       setAuthenticated(false)
-      useAppStore.getState().setScreen('login')
     }
   }
 
@@ -31,6 +31,7 @@ export default function App() {
     getCurrentUser()
       .then((user) => {
         if (user) {
+          loadUserState(user.uuid)
           setAuthUser(user)
           setAuthenticated(true)
           doLogin()
@@ -46,6 +47,7 @@ export default function App() {
       content = (
           <Login
           onAuthenticated={(user) => {
+            loadUserState(user.uuid)
             setAuthUser(user)
             setAuthenticated(true)
             doLogin()
