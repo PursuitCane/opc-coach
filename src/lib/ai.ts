@@ -34,6 +34,7 @@ export async function callAI(opts: {
   system?: string
   messages: AIMessage[]
   jsonMode?: boolean
+  signal?: AbortSignal
 }): Promise<string> {
   requireKey()
   const messages: AIMessage[] = opts.system
@@ -50,6 +51,7 @@ export async function callAI(opts: {
       Authorization: `Bearer ${API_KEY}`,
     },
     body: JSON.stringify(body),
+    signal: opts.signal,
   })
 
   if (!res.ok) {
@@ -68,11 +70,13 @@ export async function callAI(opts: {
 export async function callAIJson<T>(opts: {
   system: string
   user: string
+  signal?: AbortSignal
 }): Promise<T> {
   const raw = await callAI({
     system: opts.system,
     messages: [{ role: 'user', content: opts.user }],
     jsonMode: true,
+    signal: opts.signal,
   })
   const cleaned = extractJson(raw)
   try {

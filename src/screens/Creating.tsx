@@ -10,6 +10,7 @@ const STEPS = [
   '正在生成五维评分…',
   '正在挑出该继续追问你的问题…',
 ]
+const ANALYSIS_TIMEOUT_MS = 90_000
 
 export function Creating() {
   const project = useCurrentProject()
@@ -29,10 +30,12 @@ export function Creating() {
     const stepTimer = setInterval(() => {
       setStep((s) => Math.min(s + 1, STEPS.length - 1))
     }, 900)
+    const controller = new AbortController()
+    const timeoutTimer = setTimeout(() => controller.abort(), ANALYSIS_TIMEOUT_MS)
 
     // 后台真调 AI（一次请求同时拿到分析 + 计划补齐题）
     const isFirst = !project.analysis
-    evaluateProject(project.name, project.files, isFirst)
+    evaluateProject(project.name, project.files, isFirst, controller.signal)
       .then(({ analysis, planQuestions }) => {
         setAnalysis(project.id, analysis)
         if (planQuestions.length > 0) setPlanQuestions(project.id, planQuestions)
@@ -57,10 +60,22 @@ export function Creating() {
       })
       .catch((e) => {
         clearInterval(stepTimer)
-        setError(e instanceof Error ? e.message : String(e))
+        setError(
+          controller.signal.aborted
+            ? '分析请求超过 90 秒没有返回，可能是网络或 AI 接口异常，请重试。'
+            : e instanceof Error
+              ? e.message
+              : String(e),
+        )
+      })
+      .finally(() => {
+        clearTimeout(timeoutTimer)
       })
 
-    return () => clearInterval(stepTimer)
+    return () => {
+      clearInterval(stepTimer)
+      clearTimeout(timeoutTimer)
+    }
   }, [project, setAnalysis, setPlanQuestions, setScreen])
 
   return (

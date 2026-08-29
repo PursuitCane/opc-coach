@@ -53,6 +53,7 @@ export async function evaluateProject(
   projectName: string,
   files: FileItem[],
   isFirstRun: boolean,
+  signal?: AbortSignal,
 ): Promise<EvaluationResult> {
   const materials = files
     .map((f, i) => `【材料 ${i + 1}：${f.name}】\n${f.content}`)
@@ -72,6 +73,7 @@ ${SHAPE}`
   >({
     system: COACH_SYSTEM,
     user,
+    signal,
   })
 
   const { planQuestions, ...rest } = raw
